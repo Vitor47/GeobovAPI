@@ -1,0 +1,24 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    DATABASE_URL: str
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
+
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_DB: int
+    SESSION_CACHE_TTL_SECONDS: int = 86400
+
+    APP_PORT: int = 8000
+
+    SUPERUSER_EMAIL: str = "admin@cowtrack.local"
+    SUPERUSER_PASSWORD: str = "changeme"
+    SUPERUSER_FULL_NAME: str = "Super Admin"
+
+
+settings = Settings()

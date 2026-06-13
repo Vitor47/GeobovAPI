@@ -1,0 +1,32 @@
+---
+description: All code must be written in English
+alwaysApply: true
+---
+
+# English-Only Code
+
+All code in this project must be written in **English**.
+
+## Applies to
+
+- Variable, function, class, module, and file names
+- Docstrings and inline comments
+- Error messages and log messages
+- API route names, schema fields, and enum values
+- Commit messages and MR descriptions (unless the team explicitly requests otherwise)
+
+## Examples
+
+```python
+# ❌ BAD
+def buscar_usuario_por_email(email: str):
+    """Busca um usuário pelo email."""
+    raise ValueError("Email inválido")
+
+# ✅ GOOD
+def get_user_by_email(email: str):
+    """Retrieve a user by email."""
+    raise ValueError("Invalid email")
+```
+
+User-facing HTTP error strings may stay in Portuguese if that is the product language, but all internal code, identifiers, and documentation must remain in English.

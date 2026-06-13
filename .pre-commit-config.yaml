@@ -1,0 +1,69 @@
+repos:
+  - repo: local
+    hooks:
+      - id: black
+        name: Run Black Formatter
+        entry: black
+        language: python
+        additional_dependencies:
+          - black==26.5.1
+          - click==8.4.1
+        args:
+          - --line-length=88
+          - --check
+          - --preview
+        types:
+          - python
+
+      - id: flake8
+        name: Run Flake8 Linter
+        entry: flake8
+        language: system
+        types:
+          - python
+
+      - id: isort
+        name: Run Isort
+        entry: isort
+        language: system
+        args:
+          - --profile=black
+          - --line-length=88
+          - --check-only
+          - --diff
+        types:
+          - python
+
+      - id: mypy
+        name: Run Mypy Type Checker
+        entry: mypy
+        language: system
+        pass_filenames: false
+        always_run: true
+        args:
+          - app
+          - tests
+
+      - id: pylint
+        name: Run Pylint Linter
+        entry: pylint
+        language: system
+        pass_filenames: false
+        always_run: true
+        args:
+          - --rcfile=.pylintrc
+          - app
+          - tests
+
+      - id: pytest
+        name: Run Tests
+        entry: python -m pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
+        args:
+          - tests/
+          - -v
+          - --tb=short
+          - --strict-markers

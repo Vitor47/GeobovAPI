@@ -1,0 +1,120 @@
+---
+description: Pytest structure — unit, integration, and component tests per app
+alwaysApply: true
+---
+
+# Testing Standards (pytest)
+
+All tests use **pytest**. Organize tests by **app folder**, never as a single file per app.
+
+## Directory structure
+
+```
+tests/
+├── conftest.py                  # Shared fixtures (db session, client, mocks)
+├── fixtures/                    # Reusable fixture modules
+├── user/
+│   ├── unit/
+│   │   ├── test_create_user_step.py
+│   │   └── test_create_user_use_case.py
+│   ├── integration/
+│   │   └── test_user_repository.py
+│   └── component/
+│       └── test_user_endpoints.py
+├── company/
+│   ├── unit/
+│   ├── integration/
+│   └── component/
+└── cattle/
+    ├── unit/
+    ├── integration/
+    └── component/
+```
+
+Each app (`user`, `company`, `cattle`, …) is always a **directory** with three subdirectories: `unit/`, `integration/`, and `component/`.
+
+## Test types
+
+| Type | Folder | Scope | Dependencies |
+|------|--------|-------|--------------|
+| **Unit** | `{app}/unit/` | Single class/function in isolation | Mock repositories, no DB, no HTTP |
+| **Integration** | `{app}/integration/` | Layer interactions (e.g. repository + DB) | Test database session, real SQLAlchemy |
+| **Component** | `{app}/component/` | Full request flow through HTTP | FastAPI `TestClient`, wired DI container |
+
+### What to test where
+
+- **Unit** — steps, use cases, entities, DTOs, domain logic
+- **Integration** — concrete repositories, ORM models, migrations behavior
+- **Component** — endpoints (status codes, auth, request/response schemas)
+
+## File naming
+
+- Files: `test_{subject}.py` (e.g. `test_create_cattle_step.py`)
+- Functions: `test_{behavior}_when_{condition}` (e.g. `test_create_cattle_returns_dto_when_payload_is_valid`)
+- Classes (optional): `Test{Subject}` grouping related cases
+
+## Writing robust tests
+
+Use **Arrange → Act → Assert**:
+
+```python
+def test_create_user_step_sets_response_dto_when_user_is_created(mocker):
+    # Arrange
+    mock_repo = mocker.Mock()
+    mock_repo.create_user.return_value = User(id=1, email="a@b.com", company_id=1)
+    use_case = CreateUserUseCase(repository=mock_repo, payload=payload)
+
+    # Act
+    CreateUserStep(use_case=use_case).run()
+
+    # Assert
+    assert use_case.data.email == "a@b.com"
+    mock_repo.create_user.assert_called_once_with(payload)
+```
+
+Every test must cover:
+
+- **Happy path** — expected success behavior
+- **Edge cases** — empty lists, not found, invalid input
+- **Error paths** — exceptions, authorization failures, validation errors
+
+Avoid trivial tests that only assert mocks were called without verifying output.
+
+## pytest conventions
+
+- Use `@pytest.fixture` in `conftest.py` or `{app}/conftest.py` for shared setup
+- Use `@pytest.mark.parametrize` for multiple input scenarios
+- Use `pytest.raises` for expected exceptions
+- Prefer `mocker` fixture (`pytest-mock`) over manual `unittest.mock`
+- Keep tests independent — no shared mutable state between tests
+
+## Markers (optional but recommended)
+
+```python
+@pytest.mark.unit
+@pytest.mark.integration
+@pytest.mark.component
+```
+
+Run subsets:
+
+```bash
+pytest tests/user/unit/
+pytest tests/ -m unit
+pytest tests/ -m "not integration"
+```
+
+## Do not
+
+- Create `tests/test_user.py` or a single file per app — always use app folders
+- Mix unit, integration, and component tests in the same file
+- Put business logic assertions only at the HTTP layer — test steps and use cases in unit tests too
+- Depend on production database or external services in unit tests
+- Skip error-path coverage for new features
+
+## Adding tests for a new feature
+
+1. Create `{app}/unit/test_{feature}.py` for step and use case tests
+2. Create `{app}/integration/test_{feature}_repository.py` if persistence is involved
+3. Create `{app}/component/test_{feature}_endpoints.py` for HTTP behavior
+4. Add shared fixtures to `conftest.py` when reused across apps

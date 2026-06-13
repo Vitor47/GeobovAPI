@@ -1,0 +1,52 @@
+---
+description: Documentation standard for abstract repository methods
+alwaysApply: true
+---
+
+# Abstract Repository Documentation
+
+When defining abstract methods in repository contracts (`*_repository_abstract.py`), always document them using this pattern.
+
+## Class-level docstring
+
+Every abstract repository must include a class docstring describing the contract:
+
+```python
+class CattleRepositoryAbstract(ABC):
+    """
+    Abstract contract for persistence operations related to CattleData.
+
+    This interface defines the required methods that any concrete
+    cattle repository implementation must provide.
+    """
+```
+
+## Method-level docstring
+
+Every `@abstractmethod` must include a docstring with **description**, **Args**, and **Returns**:
+
+```python
+@abstractmethod
+def get_cattles_by_company_id(
+    self,
+    company_id: int,
+) -> list[CattleData]:
+    """
+    Retrieve all cattle records associated with a given company.
+
+    Args:
+        db (Session): Active SQLAlchemy database session.
+        company_id (int): Identifier of the company.
+
+    Returns:
+        list[CattleData]: List of cattle records for the company.
+    """
+```
+
+## Rules
+
+- Use accurate descriptions that match the actual return type and behavior.
+- Document every parameter in `Args`, including `db (Session)` when applicable.
+- Document the return type and meaning in `Returns`.
+- Do not use `pass` after the docstring; leave the method body empty.
+- Apply this pattern to all new and updated abstract repository methods in this project.

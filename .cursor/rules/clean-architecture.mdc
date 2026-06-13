@@ -1,0 +1,112 @@
+---
+description: Clean Architecture layers, naming, and Python conventions
+alwaysApply: true
+---
+
+# Clean Architecture & Python Conventions
+
+This project follows **pure Clean Architecture**. Respect layer boundaries and never skip them.
+
+## Layer structure
+
+```
+app/
+├── domain/           # Business rules — no framework imports
+│   ├── entities/     # Domain entities (plain Python classes)
+│   ├── repositories/ # Abstract repository contracts (*_repository_abstract.py)
+│   ├── use_cases/    # Base use case orchestration
+│   ├── steps/        # Base step contract
+│   ├── auth/         # Role → permission mapping (pure Python)
+│   └── enums/        # RoleEnum, PermissionEnum
+├── application/      # Application logic
+│   ├── use_cases/    # One use case per action (*_use_case.py)
+│   ├── steps/        # One step per use case operation (*_step.py)
+│   └── dtos/         # Internal data transfer objects (*_dto.py)
+├── adapters/         # External implementations
+│   ├── repositories/ # Concrete repositories (*_repository.py)
+│   ├── models/       # SQLAlchemy ORM models
+│   └── container.py  # Dependency injection wiring
+├── core/             # Cross-cutting infrastructure
+│   ├── auth/deps.py  # Permission dependency aliases
+│   ├── dependencies.py
+│   ├── security.py   # JWT
+│   └── cache_utils/  # Redis session cache
+└── presentation/     # HTTP layer
+    └── api/v1/
+        ├── endpoints/  # Controllers (call use cases only)
+        └── schemas/      # Pydantic request/response models
+```
+
+## Dependency rule
+
+Dependencies point **inward only**:
+
+- `presentation` → `application` → `domain`
+- `adapters` → `domain` (implements domain contracts)
+- `domain` must **never** import from `application`, `adapters`, or `presentation`
+
+## Request flow
+
+```
+Endpoint → UseCase.run() → Step._run() → Repository → ORM
+```
+
+- **Endpoints** map Pydantic schemas to DTOs and call `use_case.run()`. No business logic.
+- **Use cases** are `@dataclass` classes extending `BaseUseCase`, wiring steps in `__post_init__`.
+- **Steps** extend `BaseUseCaseStep`, implement `_run()`, and call `self.use_case.repository`.
+- **Repositories** hold all persistence methods. Never put DB logic in use cases, steps, or endpoints.
+
+## Repository naming
+
+| Layer | Class | File |
+|-------|-------|------|
+| Domain contract | `{Entity}RepositoryAbstract` | `domain/repositories/{entity}_repository_abstract.py` |
+| Adapter impl | `{Entity}Repository` | `adapters/repositories/{entity}_repository.py` |
+
+- Always add new persistence methods to the **abstract contract first**, then implement in the concrete `Repository` class.
+- Inject repositories via `UserRepositoryAbstract` (domain), never the concrete class outside `adapters/`.
+
+## Naming conventions (Pythonic)
+
+| Element | Style | Example |
+|---------|-------|---------|
+| Modules / files | `snake_case` | `create_user_use_case.py`, `cattle_data.py` |
+| Functions / methods | `snake_case` | `get_user_by_email`, `create_cattle` |
+| Variables / attributes | `snake_case` | `company_id`, `full_name` |
+| Classes | `PascalCase` | `User`, `CreateUserUseCase`, `UserRepository` |
+| Constants | `UPPER_SNAKE_CASE` | `MAX_RETRIES` |
+| Entity files | `snake_case` | `domain/entities/cattle_data.py` |
+| Entity classes | `PascalCase` | `class CattleData:` |
+| Use cases | `{Action}{Entity}UseCase` | `CreateUserUseCase` |
+| Steps | `{Action}{Entity}Step` | `CreateUserStep` |
+| DTOs | `{Entity}{Action}DTO` | `UserCreateDTO`, `UserResponseDTO` |
+
+## Adding a new feature checklist
+
+1. Entity in `domain/entities/{entity}.py` (if needed)
+2. Abstract methods in `domain/repositories/{entity}_repository_abstract.py`
+3. Implementation in `adapters/repositories/{entity}_repository.py`
+4. DTOs in `application/dtos/{entity}_dto.py`
+5. Step in `application/steps/{entity}/{action}_{entity}_step.py`
+6. Use case in `application/use_cases/{entity}/{action}_{entity}_use_case.py`
+7. Pydantic schema in `presentation/api/v1/schemas/{entity}.py`
+8. Endpoint in `presentation/api/v1/endpoints/{entity}.py` (use permission aliases from `core/auth/deps.py`)
+9. Wire in `adapters/container.py` and `bootstrap/routes.py`
+10. If new action: add `PermissionEnum` + update `ROLE_PERMISSIONS` (see `auth-permissions` rule)
+
+## Authentication & permissions
+
+See **`auth-permissions.mdc`** for the full pattern. Summary:
+
+- Endpoints use `CanCreateCattleDep`, `CompanyIdDep`, etc. — never `require_roles(...)`
+- Permission logic lives in `domain/auth/role_permissions.py`
+- JWT + Redis session cache — no DB lookup per request
+
+## Do not
+
+- Put business logic in endpoints, repositories, or ORM models
+- Import SQLAlchemy, FastAPI, or Pydantic inside `domain/`
+- Call repository methods directly from endpoints
+- Create use cases without steps (except orchestration base classes)
+- Use Portuguese or non-English identifiers (see `english-only` rule)
+- List roles in endpoints — use permission aliases (see `auth-permissions` rule)

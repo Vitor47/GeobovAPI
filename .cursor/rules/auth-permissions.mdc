@@ -1,0 +1,115 @@
+---
+description: JWT authentication and permission-based authorization
+alwaysApply: true
+---
+
+# Authentication & Permissions
+
+This project uses **JWT + Redis session cache** with **permission-based authorization** (not role lists in endpoints).
+
+## Architecture
+
+```
+domain/enums/permission_enum.py   # PermissionEnum (business actions)
+domain/enums/role_enum.py         # RoleEnum (admin, manager, viewer)
+domain/auth/role_permissions.py # ROLE_PERMISSIONS map + user_has_permission()
+core/dependencies.py              # get_current_user (JWT + Redis, no DB)
+core/auth/deps.py                 # require_permission, aliases for endpoints
+core/security.py                  # JWT create/decode
+core/cache_utils/user_cache.py    # Redis session (1-day TTL)
+```
+
+## Auth flow
+
+1. **Login** → validate credentials → cache session in Redis → return JWT
+2. **Request** → decode JWT → read Redis cache → fallback to JWT claims (no DB)
+3. **Logout** → invalidate Redis session
+
+JWT payload includes: `sub`, `email`, `full_name`, `company_id`, `role`, `is_superuser`.
+
+## Permission-based authorization
+
+Endpoints declare **what action** is allowed, not **which roles**:
+
+```python
+# ❌ BAD — role lists scattered across endpoints
+current_user=Depends(require_roles(RoleEnum.ADMIN, RoleEnum.MANAGER))
+
+# ✅ GOOD — semantic permission aliases
+_: CachedUser = CanCreateCattleDep
+company_id: int = CompanyIdDep
+```
+
+### Adding a new permission
+
+1. Add to `PermissionEnum` in `domain/enums/permission_enum.py`
+2. Map roles in `ROLE_PERMISSIONS` in `domain/auth/role_permissions.py`
+3. Create alias in `core/auth/deps.py`:
+   ```python
+   CanDeleteCattleDep = Depends(require_permission(PermissionEnum.CATTLE_DELETE))
+   CanDeleteCattle = Annotated[CachedUser, CanDeleteCattleDep]
+   ```
+4. Use the alias in the endpoint
+
+### Superuser
+
+- `is_superuser=True` bypasses all permission checks (Django-style)
+- Superusers must send `X-Company-Id` header to scope requests to a company
+- Use `SuperUserDep` / `SuperUser` for superuser-only endpoints
+
+## Endpoint dependency aliases
+
+Import from `app.core.auth.deps`:
+
+| CBV controllers (`*Dep`) | Function routes (`Annotated`) | Purpose |
+|--------------------------|-------------------------------|---------|
+| `CanCreateCattleDep` | `CanCreateCattle` | `cattle:create` |
+| `CanReadCattleDep` | `CanReadCattle` | `cattle:read` |
+| `CanCreateUserDep` | `CanCreateUser` | `user:create` |
+| `CanReadUserDep` | `CanReadUser` | `user:read` |
+| `CanReadCompanyDep` | `CanReadCompany` | `company:read` |
+| `CanCreateDeviceDep` | `CanCreateDevice` | `device:create` |
+| `CanReadDeviceDep` | `CanReadDevice` | `device:read` |
+| `CurrentUserDep` | `CurrentUser` | authenticated user |
+| `SuperUserDep` | `SuperUser` | superuser only |
+| `CompanyIdDep` | `CompanyId` | resolved company scope |
+
+### @cbv controllers (class-based views)
+
+Use `*Dep` suffix — `@cbv` does not support `Annotated[..., Depends(...)]`:
+
+```python
+from app.core.auth.deps import CanCreateCattleDep, CompanyIdDep
+from app.core.cache_utils.user_cache import CachedUser
+
+def create_cattle(
+    self,
+    data: CattleDataCreate,
+    company_id: int = CompanyIdDep,
+    _: CachedUser = CanCreateCattleDep,
+):
+    ...
+```
+
+Use `_` for auth-only dependencies when the user object is not needed in the body.
+
+### Function-based routes
+
+Use `Annotated` aliases:
+
+```python
+def create_cattle(
+    data: CattleDataCreate,
+    company_id: CompanyId,
+    _: CanCreateCattle,
+):
+    ...
+```
+
+## Do not
+
+- List roles directly in endpoints (`require_roles(RoleEnum.ADMIN, ...)`)
+- Put permission logic in endpoints — keep it in `domain/auth/role_permissions.py`
+- Query the database in `get_current_user` on every request
+- Import FastAPI inside `domain/`
+- Skip updating `ROLE_PERMISSIONS` when adding a new `PermissionEnum`

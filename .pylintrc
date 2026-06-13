@@ -1,0 +1,49 @@
+[MAIN]
+py-version=3.12
+jobs=1
+ignore=venv,.venv,alembic
+extension-pkg-allow-list=dependency_injector,alembic
+
+[MESSAGES CONTROL]
+disable=
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-positional-arguments,
+    too-many-instance-attributes,
+    redefined-builtin,
+    redefined-outer-name,
+    duplicate-code,
+    import-outside-toplevel,
+    unused-argument,
+    invalid-name,
+    arguments-differ,
+    inconsistent-return-statements,
+    c-extension-no-member,
+    not-callable,
+
+[TYPECHECK]
+generated-members=func.now
+
+[FORMAT]
+max-line-length=88
+
+[BASIC]
+good-names=
+    i,
+    j,
+    k,
+    id,
+    db,
+    _,
+    app,
+
+[DESIGN]
+max-args=10
+max-positional-arguments=10
+max-attributes=12
+
+[REPORTS]
+score=no
