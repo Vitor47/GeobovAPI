@@ -133,6 +133,7 @@ cp .env.example .env
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `POSTGRES_HOST_PORT` | Host port for Docker Postgres | `5433` (avoids local 5432 conflict) |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:postgres@db:5432/cow_track` |
 | `SECRET_KEY` | JWT signing secret | — |
 | `ALGORITHM` | JWT algorithm | `HS256` |
@@ -142,11 +143,11 @@ cp .env.example .env
 | `REDIS_PORT` | Redis port | `6379` |
 | `REDIS_DB` | Redis database index | `0` |
 | `APP_PORT` | API port | `8000` |
-| `SUPERUSER_EMAIL` | Dev superuser email | `admin@cowtrack.local` |
+| `SUPERUSER_EMAIL` | Dev superuser email | `admin@example.com` |
 | `SUPERUSER_PASSWORD` | Dev superuser password | `changeme` |
 | `SUPERUSER_FULL_NAME` | Dev superuser name | `Super Admin` |
 
-> **Local without Docker:** set `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cow_track` and `REDIS_HOST=localhost`.
+> **Local without Docker:** set `DATABASE_URL=postgresql://postgres:postgres@localhost:5433/cow_track` and `REDIS_HOST=localhost` (use `5433` if Postgres runs via Docker).
 
 ---
 
@@ -183,7 +184,7 @@ make docker-dev
 | Service | Container | Port | Notes |
 |---------|-----------|------|-------|
 | API | `cowtrack_api` | 8000 | `/health` checks DB + Redis |
-| PostgreSQL | `cowtrack_postgres` | 5432 | persistent volume |
+| PostgreSQL | `cowtrack_postgres` | 5433 | persistent volume (host port) |
 | Redis | `cowtrack_redis` | 6379 | AOF persistence, session cache |
 
 Useful commands:
@@ -258,7 +259,7 @@ python -m app.commands create-cattle --tag TAG-001 --company-id 1
 ```bash
 curl -X POST http://localhost:8000/api/v1/users/login \
   -H "Content-Type: application/json" \
-  -d '{"email": "admin@cowtrack.local", "password": "changeme"}'
+  -d '{"email": "admin@example.com", "password": "changeme"}'
 ```
 
 Use the returned `access_token` as `Authorization: Bearer <token>`.

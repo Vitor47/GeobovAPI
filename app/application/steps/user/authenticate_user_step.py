@@ -1,6 +1,7 @@
 from app.core.cache_utils.user_cache import cache_user_session
 from app.core.security import build_token_payload, create_access_token
 from app.domain.steps.base_use_case_step import BaseUseCaseStep
+from app.domain.use_cases.exceptions import StopUseCaseException
 
 
 class AuthenticateUserStep(BaseUseCaseStep):
@@ -8,10 +9,13 @@ class AuthenticateUserStep(BaseUseCaseStep):
         email = self.use_case.email
         password = self.use_case.password
 
+        print(email, password)
+
         user = self.use_case.repository.get_user_by_email(email)
+        print(user)
 
         if not user or not user.authenticate(password):
-            return
+            raise StopUseCaseException("Invalid credentials")
 
         cache_user_session(user)
 

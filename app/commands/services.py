@@ -3,6 +3,7 @@ from datetime import date
 import click
 from sqlalchemy.orm import Session
 
+from app.adapters.database.session_factory import SessionFactory
 from app.adapters.models.cattle import Cattle
 from app.adapters.models.company import Company
 from app.adapters.models.device import Device
@@ -11,12 +12,8 @@ from app.adapters.models.user import User
 from app.adapters.repositories.device_repository import DeviceRepository
 from app.application.dtos.device_dto import DeviceCreateDTO
 from app.core.config import settings
-from app.core.database import Base, SessionLocal, engine
+from app.core.database import Base, engine
 from app.domain.enums.role_enum import RoleEnum
-
-
-def get_db() -> Session:
-    return SessionLocal()
 
 
 def seed_roles(db: Session) -> None:
@@ -53,7 +50,7 @@ def create_superuser(db: Session) -> User:
 
 def run_setup() -> None:
     Base.metadata.create_all(bind=engine)
-    db = get_db()
+    db = SessionFactory.create()
     try:
         seed_roles(db)
         create_superuser(db)
@@ -63,6 +60,11 @@ def run_setup() -> None:
 
 
 def create_company_record(db: Session, name: str) -> Company:
+    existing = db.query(Company).filter(Company.name == name).first()
+    if existing:
+        click.echo(f"Company already exists: id={existing.id} name={existing.name}")
+        return existing
+
     company = Company(name=name)
     db.add(company)
     db.commit()
@@ -86,7 +88,8 @@ def create_farmer_record(
 
     existing = db.query(User).filter(User.email == email).first()
     if existing:
-        raise click.ClickException(f"User already exists: {email}")
+        click.echo(f"Farmer already exists: id={existing.id} email={existing.email}")
+        return existing
 
     role_record = db.query(Role).filter(Role.name == role.value).first()
     if not role_record:
@@ -115,7 +118,19 @@ def create_cattle_record(db: Session, tag: str, company_id: int) -> Cattle:
     if not company:
         raise click.ClickException(f"Company {company_id} not found")
 
-    cattle = Cattle(tag=tag, company_id=company_id)
+    existing = (
+        db.query(Cattle)
+        .filter(Cattle.tag == tag, Cattle.company_id == company_id)
+        .first()
+    )
+    if existing:
+        click.echo(
+            f"Cattle already exists: id={existing.id} tag={existing.tag} "
+            f"company_id={company_id}"
+        )
+        return existing
+
+    cattle = Cattle(tag=tag, company_id=company_id, name="Cattle 1")
     db.add(cattle)
     db.commit()
     db.refresh(cattle)
@@ -146,3 +161,26 @@ def create_device_record(
         f"api_key={device.api_key}"
     )
     return device
+
+
+def run_seed() -> None:
+    DEV_COMPANY_NAME = "Dev Farm"
+    DEV_FARMER_EMAIL = "farmer@example.com"
+    DEV_CATTLE_TAG = "DEV-001"
+
+    db = SessionFactory.create()
+    try:
+        company = create_company_record(db, DEV_COMPANY_NAME)
+        create_farmer_record(
+            db=db,
+            full_name="Dev Farmer",
+            email=DEV_FARMER_EMAIL,
+            password="dev123456",
+            birth_date=date(1990, 1, 1),
+            company_id=int(company.id),
+            role=RoleEnum.MANAGER,
+        )
+        create_cattle_record(db, DEV_CATTLE_TAG, int(company.id))
+        click.echo("Seed completed successfully.")
+    finally:
+        db.close()

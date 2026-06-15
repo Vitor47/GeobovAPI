@@ -1,9 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException
+from dependency_injector.wiring import Provide, inject
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi_utils.cbv import cbv
 
-from app.adapters.container import container
+from app.adapters.container import Container
 from app.application.dtos.device_dto import (
     DeviceCreateDTO,
     DeviceTelemetryIngestDTO,
@@ -28,6 +29,27 @@ router = APIRouter(tags=["Devices"])
 
 @cbv(router)
 class DeviceController:
+    @inject
+    def __init__(
+        self,
+        create_device_use_case_factory=Depends(
+            Provide[Container.create_device_use_case.provider]
+        ),
+        get_devices_use_case_factory=Depends(
+            Provide[Container.get_devices_use_case.provider]
+        ),
+        get_device_use_case_factory=Depends(
+            Provide[Container.get_device_use_case.provider]
+        ),
+        ingest_telemetry_use_case_factory=Depends(
+            Provide[Container.ingest_telemetry_use_case.provider]
+        ),
+    ):
+        self.create_device_use_case_factory = create_device_use_case_factory
+        self.get_devices_use_case_factory = get_devices_use_case_factory
+        self.get_device_use_case_factory = get_device_use_case_factory
+        self.ingest_telemetry_use_case_factory = ingest_telemetry_use_case_factory
+
     @router.post(
         "/",
         response_model=DeviceResponse,
@@ -56,13 +78,16 @@ class DeviceController:
             transmission_interval_minutes=data.transmission_interval_minutes,
         )
 
+        use_case = self.create_device_use_case_factory(
+            payload=payload,
+        )
+
         try:
-            use_case = container.create_device_use_case(payload=payload)
             use_case.run()
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         except StopUseCaseException as error:
-            raise HTTPException(status_code=500, detail=str(error)) from error
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
         return use_case.data
 
@@ -81,12 +106,14 @@ class DeviceController:
         company_id: int = CompanyIdDep,
         _: CachedUser = CanReadDeviceDep,
     ):
-        use_case = container.get_devices_use_case(company_id=company_id)
+        use_case = self.get_devices_use_case_factory(
+            company_id=company_id,
+        )
 
         try:
             use_case.run()
         except StopUseCaseException as error:
-            raise HTTPException(status_code=500, detail=str(error)) from error
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
         return use_case.data
 
@@ -107,14 +134,15 @@ class DeviceController:
         company_id: int = CompanyIdDep,
         _: CachedUser = CanReadDeviceDep,
     ):
-        use_case = container.get_device_use_case(
-            device_id=device_id, company_id=company_id
+        use_case = self.get_device_use_case_factory(
+            device_id=device_id,
+            company_id=company_id,
         )
 
         try:
             use_case.run()
         except StopUseCaseException as error:
-            raise HTTPException(status_code=500, detail=str(error)) from error
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
         if not use_case.data:
             raise HTTPException(status_code=404, detail="Device not found")
@@ -151,7 +179,7 @@ class DeviceController:
             temperature=data.temperature,
         )
 
-        use_case = container.ingest_telemetry_use_case(
+        use_case = self.ingest_telemetry_use_case_factory(
             api_key=x_device_api_key,
             payload=payload,
         )

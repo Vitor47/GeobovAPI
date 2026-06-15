@@ -5,18 +5,9 @@ from app.core.cache_utils.user_cache import (
     cache_user_from_payload,
     get_cached_session,
 )
-from app.core.database import SessionLocal
 from app.core.security import decode_access_token
 
 security = HTTPBearer()
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 def get_current_user(

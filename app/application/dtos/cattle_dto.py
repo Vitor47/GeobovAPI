@@ -1,11 +1,34 @@
+from dataclasses import dataclass
+from datetime import datetime
+
+from app.domain.enums.cattle_enum import GenderEnum
+
+
+@dataclass
 class CattleCreateDTO:
-    def __init__(self, tag: str, company_id: int):
-        self.tag = tag
-        self.company_id = company_id
+    tag: str
+    name: str
+    description: str | None
+    birth_date: datetime | None
+    weight: float | None
+    breed: str | None
+    gender: GenderEnum | None
+    color: str | None
+    notes: str | None
+    company_id: int
 
 
+@dataclass
+class CattleDataCreateDTO:
+    cattle_id: int
+    lat: float
+    lon: float
+    movement: float
+    temperature: float
+
+
+@dataclass
 class CattleResponseDTO:
-    def __init__(self, id: int, tag: str, company_id: int):
-        self.id = id
-        self.tag = tag
-        self.company_id = company_id
+    id: int
+    tag: str
+    company_id: int

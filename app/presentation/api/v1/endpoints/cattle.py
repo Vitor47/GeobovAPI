@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from dependency_injector.wiring import Provide, inject
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi_utils.cbv import cbv
 
-from app.adapters.container import container
+from app.adapters.container import Container
 from app.application.dtos.cattle_data_dto import CattleDataCreateDTO
 from app.core.auth.deps import (
     CanCreateCattleDep,
@@ -21,6 +22,23 @@ router = APIRouter(tags=["Cattle"])
 
 @cbv(router)
 class CattleController:
+    @inject
+    def __init__(
+        self,
+        create_cattle_use_case_factory=Depends(
+            Provide[Container.create_cattle_use_case.provider]
+        ),
+        get_cattles_use_case_factory=Depends(
+            Provide[Container.get_cattles_use_case.provider]
+        ),
+        get_cattle_use_case_factory=Depends(
+            Provide[Container.get_cattle_use_case.provider]
+        ),
+    ):
+        self.create_cattle_use_case_factory = create_cattle_use_case_factory
+        self.get_cattles_use_case_factory = get_cattles_use_case_factory
+        self.get_cattle_use_case_factory = get_cattle_use_case_factory
+
     @router.post(
         "/",
         response_model=CattleDataResponse,
@@ -34,7 +52,7 @@ class CattleController:
             403: {"model": ErrorResponse, "description": "Missing permission."},
         },
     )
-    def create_cattle(
+    def create_cattle_telemetry(
         self,
         data: CattleDataCreate,
         company_id: int = CompanyIdDep,
@@ -49,12 +67,14 @@ class CattleController:
             company_id=company_id,
         )
 
-        use_case = container.create_cattle_use_case(payload=payload)
+        use_case = self.create_cattle_use_case_factory(
+            payload=payload,
+        )
 
         try:
             use_case.run()
         except StopUseCaseException as error:
-            return f"An unexpected error occurred: {error}"
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
         return use_case.data
 
@@ -73,12 +93,14 @@ class CattleController:
         company_id: int = CompanyIdDep,
         _: CachedUser = CanReadCattleDep,
     ):
-        use_case = container.get_cattles_use_case(company_id=company_id)
+        use_case = self.get_cattles_use_case_factory(
+            company_id=company_id,
+        )
 
         try:
             use_case.run()
         except StopUseCaseException as error:
-            return f"An unexpected error occurred: {error}"
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
         return use_case.data
 
@@ -99,13 +121,14 @@ class CattleController:
         company_id: int = CompanyIdDep,
         _: CachedUser = CanReadCattleDep,
     ):
-        use_case = container.get_cattle_use_case(
-            cattle_id=cattle_id, company_id=company_id
+        use_case = self.get_cattle_use_case_factory(
+            cattle_id=cattle_id,
+            company_id=company_id,
         )
 
         try:
             use_case.run()
         except StopUseCaseException as error:
-            return f"An unexpected error occurred: {error}"
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
         return use_case.data

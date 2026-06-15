@@ -14,7 +14,7 @@ class UserCreate(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "email": "farmer@dev.local",
+                "email": "farmer@example.com",
                 "password": "dev123456",
             }
         }
@@ -31,7 +31,7 @@ class UserResponse(BaseModel):
         json_schema_extra={
             "example": {
                 "id": 2,
-                "email": "farmer@dev.local",
+                "email": "farmer@example.com",
                 "company_id": 1,
             }
         },
@@ -45,7 +45,7 @@ class UserLogin(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "email": "admin@cowtrack.local",
+                "email": "admin@example.com",
                 "password": "changeme",
             }
         }
@@ -63,7 +63,6 @@ class UserLoginResponse(BaseModel):
         default=None, description="Role name (admin, manager, viewer)."
     )
     is_superuser: bool | None = None
-    detail: str | None = None
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -72,7 +71,7 @@ class UserLoginResponse(BaseModel):
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "token_type": "bearer",
                 "id": 1,
-                "email": "admin@cowtrack.local",
+                "email": "admin@example.com",
                 "full_name": "Super Admin",
                 "company_id": None,
                 "role": "admin",

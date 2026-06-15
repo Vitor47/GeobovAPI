@@ -1,11 +1,12 @@
 import click
 
+from app.adapters.database.session_factory import SessionFactory
 from app.commands.services import (
     create_cattle_record,
     create_company_record,
     create_device_record,
     create_farmer_record,
-    get_db,
+    run_seed,
     run_setup,
 )
 from app.domain.enums.role_enum import RoleEnum
@@ -22,11 +23,18 @@ def setup():
     run_setup()
 
 
+@cli.command("seed")
+def seed():
+    """Initialize database and load idempotent dev sample data."""
+    run_setup()
+    run_seed()
+
+
 @cli.command("create-company")
 @click.option("--name", required=True, help="Company name")
 def create_company(name: str):
     """Create a new company (farm)."""
-    db = get_db()
+    db = SessionFactory.create()
     try:
         create_company_record(db, name)
     finally:
@@ -47,7 +55,7 @@ def create_company(name: str):
 )
 def create_farmer(full_name, email, password, birth_date, company_id, role):
     """Create a farmer user linked to a company."""
-    db = get_db()
+    db = SessionFactory.create()
     try:
         create_farmer_record(
             db=db,
@@ -67,7 +75,7 @@ def create_farmer(full_name, email, password, birth_date, company_id, role):
 @click.option("--company-id", required=True, type=int, help="Company ID")
 def create_cattle(tag: str, company_id: int):
     """Register a new cattle animal for a company."""
-    db = get_db()
+    db = SessionFactory.create()
     try:
         create_cattle_record(db, tag, company_id)
     finally:
@@ -81,7 +89,7 @@ def create_cattle(tag: str, company_id: int):
 @click.option("--name", default=None, help="Optional device name")
 def create_device(serial: str, cattle_id: int, company_id: int, name: str | None):
     """Register a LoRa GPS device linked to a cattle and company."""
-    db = get_db()
+    db = SessionFactory.create()
     try:
         create_device_record(db, serial, cattle_id, company_id, name)
     finally:

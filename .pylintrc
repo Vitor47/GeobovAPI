@@ -26,6 +26,7 @@ disable=
 
 [TYPECHECK]
 generated-members=func.now
+ignored-classes=DeclarativeContainer, Container
 
 [FORMAT]
 max-line-length=88

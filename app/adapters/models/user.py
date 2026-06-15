@@ -2,16 +2,18 @@ from passlib.context import CryptContext
 from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.core.database import Base
+from app.adapters.models.base import BaseModel
 
 
-class User(Base):
+class User(BaseModel):
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
     full_name = Column(String, nullable=False)
     birth_date = Column(Date, nullable=False)
+    phone = Column(String, nullable=True)
+    cpf = Column(String, nullable=True)
+    cnpj = Column(String, nullable=True)
     email = Column(String(255), unique=True, nullable=False)
     _password_hash = Column(String)
     is_superuser = Column(Boolean, default=False, nullable=False)

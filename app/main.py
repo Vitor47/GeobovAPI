@@ -14,7 +14,7 @@ def create_app() -> DocumentedFastAPI:
         version="1.0.0",
         contact={
             "name": "CowTrack Team",
-            "email": "admin@cowtrack.local",
+            "email": "vitormateusmiolo@gmail.com",
         },
         license_info={
             "name": "Proprietary",

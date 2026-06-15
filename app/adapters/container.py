@@ -40,33 +40,41 @@ from app.application.use_cases.user.authenticate_user_use_case import (
 from app.application.use_cases.user.create_user_use_case import (
     CreateUserUseCase,
 )
+from app.core.database import get_db
 
 
 class Container(containers.DeclarativeContainer):
+    db = providers.Resource(get_db)
 
-    cattle_repository = providers.Factory(CattleRepository)
-    user_repository = providers.Factory(UserRepository)
-    company_repository = providers.Factory(CompanyRepository)
-    device_repository = providers.Factory(DeviceRepository)
+    cattle_repository = providers.Factory(CattleRepository, db=db)
+    user_repository = providers.Factory(UserRepository, db=db)
+    company_repository = providers.Factory(CompanyRepository, db=db)
+    device_repository = providers.Factory(DeviceRepository, db=db)
 
     create_cattle_use_case = providers.Factory(
-        CreateCattleUseCase, repository=cattle_repository
+        CreateCattleUseCase,
+        repository=cattle_repository,
     )
     get_cattle_use_case = providers.Factory(
-        GetCattleUseCase, repository=cattle_repository
+        GetCattleUseCase,
+        repository=cattle_repository,
     )
     get_cattles_use_case = providers.Factory(
-        GetCattlesUseCase, repository=cattle_repository
+        GetCattlesUseCase,
+        repository=cattle_repository,
     )
 
     create_device_use_case = providers.Factory(
-        CreateDeviceUseCase, repository=device_repository
+        CreateDeviceUseCase,
+        repository=device_repository,
     )
     get_device_use_case = providers.Factory(
-        GetDeviceUseCase, repository=device_repository
+        GetDeviceUseCase,
+        repository=device_repository,
     )
     get_devices_use_case = providers.Factory(
-        GetDevicesUseCase, repository=device_repository
+        GetDevicesUseCase,
+        repository=device_repository,
     )
     ingest_telemetry_use_case = providers.Factory(
         IngestTelemetryUseCase,
@@ -75,21 +83,26 @@ class Container(containers.DeclarativeContainer):
     )
 
     create_user_use_case = providers.Factory(
-        CreateUserUseCase, repository=user_repository
+        CreateUserUseCase,
+        repository=user_repository,
     )
     authenticate_user_use_case = providers.Factory(
-        AuthenticateUserUseCase, repository=user_repository
+        AuthenticateUserUseCase,
+        repository=user_repository,
     )
 
     create_company_use_case = providers.Factory(
-        CreateCompanyUseCase, repository=company_repository
+        CreateCompanyUseCase,
+        repository=company_repository,
     )
     get_company_use_case = providers.Factory(
-        GetCompanyUseCase, repository=company_repository
+        GetCompanyUseCase,
+        repository=company_repository,
     )
     list_companies_use_case = providers.Factory(
-        ListCompaniesUseCase, repository=company_repository
+        ListCompaniesUseCase,
+        repository=company_repository,
     )
 
 
-container = Container()
+container: Container = Container()

@@ -23,6 +23,11 @@ os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 os.environ.setdefault("REDIS_HOST", "localhost")
 os.environ.setdefault("REDIS_PORT", "6379")
 os.environ.setdefault("REDIS_DB", "0")
+os.environ.setdefault("SESSION_CACHE_TTL_SECONDS", "86400")
+os.environ.setdefault("APP_PORT", "8000")
+os.environ.setdefault("SUPERUSER_EMAIL", "admin@example.com")
+os.environ.setdefault("SUPERUSER_PASSWORD", "changeme")
+os.environ.setdefault("SUPERUSER_FULL_NAME", "Super Admin")
 
 
 @pytest.fixture
@@ -55,7 +60,7 @@ def seeded_company(db_session) -> Company:
 
 @pytest.fixture
 def seeded_cattle(db_session, seeded_company) -> Cattle:
-    cattle = Cattle(tag="TAG-001", company_id=seeded_company.id)
+    cattle = Cattle(tag="TAG-001", company_id=seeded_company.id, name="Cattle 1")
     db_session.add(cattle)
     db_session.commit()
     db_session.refresh(cattle)

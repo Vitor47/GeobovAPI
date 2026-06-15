@@ -2,14 +2,17 @@
         setup seed lint format clean docker-up docker-dev docker-down docker-logs \
         docker-ps docker-setup docker-seed docker-down-v pre-commit-install
 
+PYTHON ?= $(shell test -x venv/bin/python && echo ./venv/bin/python || echo python3)
+PIP ?= $(shell test -x venv/bin/pip && echo ./venv/bin/pip || echo pip3)
+
 help: ## Show available commands
 	@grep -E '^[a-zA-Z0-9_-]+:.*##' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
 
 install: ## Install production dependencies
-	pip install -r requirements.txt
+	$(PIP) install -r requirements.txt
 
 install-dev: ## Install production + development dependencies
-	pip install -r requirements.txt -r requirements-dev.txt
+	$(PIP) install -r requirements.txt -r requirements-dev.txt
 
 run: ## Run API locally with hot reload
 	uvicorn app.main:app --host 0.0.0.0 --port $${APP_PORT:-8000} --reload
@@ -26,19 +29,11 @@ test-integration: ## Run integration tests only
 test-component: ## Run component tests only
 	pytest tests/ -m component -v
 
-setup: ## Initialize database, roles, and superuser
-	python -m app.commands setup
+setup: ## Initialize database, roles, and superuser (local Python)
+	$(PYTHON) -m app.commands setup
 
-seed: setup ## Alias for setup + sample dev data
-	python -m app.commands create-company --name "Dev Farm"
-	python -m app.commands create-farmer \
-		--full-name "Dev Farmer" \
-		--email "farmer@dev.local" \
-		--password "dev123456" \
-		--birth-date 1990-01-01 \
-		--company-id 1 \
-		--role manager
-	python -m app.commands create-cattle --tag DEV-001 --company-id 1
+seed: ## Seed idempotent dev sample data (local Python)
+	$(PYTHON) -m app.commands seed
 
 docker-up: ## Start production-like Docker stack (Postgres + Redis + API)
 	docker compose up -d --build
@@ -61,16 +56,8 @@ docker-ps: ## Show running containers
 docker-setup: ## Run DB setup inside the API container
 	docker compose exec api python -m app.commands setup
 
-docker-seed: docker-setup ## Seed sample dev data inside Docker
-	docker compose exec api python -m app.commands create-company --name "Dev Farm"
-	docker compose exec api python -m app.commands create-farmer \
-		--full-name "Dev Farmer" \
-		--email "farmer@dev.local" \
-		--password "dev123456" \
-		--birth-date 1990-01-01 \
-		--company-id 1 \
-		--role manager
-	docker compose exec api python -m app.commands create-cattle --tag DEV-001 --company-id 1
+docker-seed: ## Seed idempotent dev sample data inside Docker
+	docker compose exec api python -m app.commands seed
 
 pre-commit-install: ## Install pre-commit hooks
 	pre-commit install

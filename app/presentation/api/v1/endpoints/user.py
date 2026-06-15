@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from dependency_injector.wiring import Provide, inject
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi_utils.cbv import cbv
 
-from app.adapters.container import container
+from app.adapters.container import Container
 from app.application.dtos.user_dto import UserLoginDTO
 from app.core.auth.deps import CanCreateUserDep, CurrentUserDep
 from app.core.cache_utils.user_cache import CachedUser, invalidate_user_session
@@ -19,6 +20,18 @@ router = APIRouter(tags=["Users"])
 
 @cbv(router)
 class UserController:
+    @inject
+    def __init__(
+        self,
+        authenticate_user_use_case_factory=Depends(
+            Provide[Container.authenticate_user_use_case.provider]
+        ),
+        create_user_use_case_factory=Depends(
+            Provide[Container.create_user_use_case.provider]
+        ),
+    ):
+        self.authenticate_user_use_case_factory = authenticate_user_use_case_factory
+        self.create_user_use_case_factory = create_user_use_case_factory
 
     @router.post(
         "/",
@@ -40,12 +53,14 @@ class UserController:
     ):
         data.company_id = current_user.company_id
 
-        use_case = container.create_user_use_case(data=data)
+        use_case = self.create_user_use_case_factory(
+            payload=data,
+        )
 
         try:
             use_case.run()
         except StopUseCaseException as error:
-            return f"An unexpected error occurred: {error}"
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
         return use_case.data
 
@@ -61,9 +76,13 @@ class UserController:
             401: {"model": ErrorResponse, "description": "Invalid credentials."},
         },
     )
-    def login(self, data: UserLogin):
+    def login(
+        self,
+        data: UserLogin,
+    ):
         payload = UserLoginDTO(email=data.email, password=data.password)
-        use_case = container.authenticate_user_use_case(
+
+        use_case = self.authenticate_user_use_case_factory(
             email=payload.email,
             password=payload.password,
         )
@@ -71,7 +90,7 @@ class UserController:
         try:
             use_case.run()
         except StopUseCaseException as error:
-            return f"An unexpected error occurred: {error}"
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
         if not use_case.data:
             raise HTTPException(status_code=401, detail="Invalid credentials")

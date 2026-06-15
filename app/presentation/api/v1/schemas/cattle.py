@@ -1,4 +1,27 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.domain.enums.cattle_enum import GenderEnum
+
+
+class CattleCreate(BaseModel):
+    tag: str
+    name: str
+    description: str | None = None
+    birth_date: datetime | None = None
+    weight: float | None = None
+    breed: str | None = None
+    gender: GenderEnum | None = None
+    color: str | None = None
+    notes: str | None = None
+
+
+class CattleResponse(CattleCreate):
+    id: int
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CattleDataCreate(BaseModel):

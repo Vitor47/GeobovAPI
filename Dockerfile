@@ -4,6 +4,7 @@ FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
@@ -29,9 +30,10 @@ RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
 FROM base AS runtime
 
+COPY requirements.txt .
 COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir /wheels/* \
-    && rm -rf /wheels
+RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt \
+    && rm -rf /wheels requirements.txt
 
 COPY . .
 
