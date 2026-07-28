@@ -24,7 +24,25 @@ That value is stable for the life of the chip. Register the **same** string as
 `Device.serial_number` in CowTrack (admin / API).
 
 Optional override: hold **BOOT** at power-on → captive portal `Collar-…` → set
-serial / interval / LoRa MHz (stored in NVS).
+serial / sleep interval / GPS fix timeout / GPS power GPIO / LoRa MHz (NVS).
+
+## Collar power (deep sleep)
+
+Each wake cycle:
+
+```text
+power GPS ON → wait fix (timeout) → LoRa TX → GPS OFF → ESP32 deep sleep
+```
+
+| Portal field | Meaning | Default |
+|--------------|---------|---------|
+| Deep sleep interval ms | Time asleep between TX | `30000` |
+| GPS fix timeout ms | Max wait for satellites | `45000` |
+| GPS power GPIO | EN / MOSFET gate (`-1` = always on) | `-1` |
+| GPS power active high | `1` = HIGH powers GPS | `1` |
+
+Wire GPS `EN` (or a P-MOSFET on VCC) to the configured GPIO for real savings.
+Without that pin, Deep Sleep still cuts ESP32 draw; GPS may keep consuming.
 
 ## Gateway config
 
