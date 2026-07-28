@@ -1,6 +1,7 @@
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 import click
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.adapters.database.session_factory import SessionFactory
@@ -9,10 +10,15 @@ from app.adapters.models.company import Company
 from app.adapters.models.device import Device
 from app.adapters.models.role import Role
 from app.adapters.models.user import User
+from app.adapters.repositories.cattle_data_repository import CattleDataRepository
 from app.adapters.repositories.device_repository import DeviceRepository
 from app.application.dtos.device_dto import DeviceCreateDTO
+from app.application.use_cases.telemetry.downsample_telemetry_use_case import (
+    DownsampleTelemetryUseCase,
+)
 from app.core.config import settings
 from app.core.database import Base, engine
+from app.core.mongo import get_mongo_db
 from app.domain.enums.role_enum import RoleEnum
 
 
@@ -48,8 +54,16 @@ def create_superuser(db: Session) -> User:
     return user
 
 
+def ensure_mongo_indexes() -> None:
+    repository = CattleDataRepository(db=get_mongo_db())
+    repository.ensure_indexes()
+    click.echo("MongoDB telemetry indexes ensured.")
+
+
 def run_setup() -> None:
     Base.metadata.create_all(bind=engine)
+    _drop_legacy_cattle_data_table()
+    ensure_mongo_indexes()
     db = SessionFactory.create()
     try:
         seed_roles(db)
@@ -57,6 +71,13 @@ def run_setup() -> None:
         click.echo("Setup completed successfully.")
     finally:
         db.close()
+
+
+def _drop_legacy_cattle_data_table() -> None:
+    """Remove the old PostgreSQL cattle_data table after hybrid migration."""
+    with engine.begin() as connection:
+        connection.execute(text("DROP TABLE IF EXISTS cattle_data CASCADE"))
+    click.echo("Dropped legacy PostgreSQL cattle_data table (if it existed).")
 
 
 def create_company_record(db: Session, name: str) -> Company:
@@ -156,11 +177,30 @@ def create_device_record(
             name=name,
         )
     )
-    click.echo(
-        f"Device created: id={device.id} serial={device.serial_number} "
-        f"api_key={device.api_key}"
-    )
+    click.echo(f"Device created: id={device.id} serial={device.serial_number}")
     return device
+
+
+def run_downsample_telemetry(
+    retention_days: int | None = None,
+    interval_minutes: int | None = None,
+) -> int:
+    days = retention_days or settings.TELEMETRY_RAW_RETENTION_DAYS
+    interval = interval_minutes or settings.TELEMETRY_HISTORY_INTERVAL_MINUTES
+    older_than = datetime.now(timezone.utc) - timedelta(days=days)
+
+    repository = CattleDataRepository(db=get_mongo_db())
+    use_case = DownsampleTelemetryUseCase(
+        repository=repository,
+        older_than=older_than,
+        interval_minutes=interval,
+    )
+    use_case.run()
+    click.echo(
+        f"Downsample completed: deleted {use_case.deleted_count} raw samples "
+        f"older than {days} days (history interval={interval} min)."
+    )
+    return use_case.deleted_count
 
 
 def run_seed() -> None:

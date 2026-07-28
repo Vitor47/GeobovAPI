@@ -6,29 +6,28 @@ ROLE_PERMISSIONS: dict[RoleEnum, frozenset[PermissionEnum]] = {
         {
             PermissionEnum.CATTLE_CREATE,
             PermissionEnum.CATTLE_READ,
+            PermissionEnum.CATTLE_UPDATE,
             PermissionEnum.USER_CREATE,
             PermissionEnum.USER_READ,
             PermissionEnum.COMPANY_READ,
             PermissionEnum.DEVICE_CREATE,
             PermissionEnum.DEVICE_READ,
+            PermissionEnum.GATEWAY_CREATE,
+            PermissionEnum.GATEWAY_READ,
         }
     ),
+    # Farmer app (for now): browse herd + write observations only.
     RoleEnum.MANAGER: frozenset(
         {
-            PermissionEnum.CATTLE_CREATE,
             PermissionEnum.CATTLE_READ,
-            PermissionEnum.USER_READ,
+            PermissionEnum.CATTLE_UPDATE,
             PermissionEnum.COMPANY_READ,
-            PermissionEnum.DEVICE_CREATE,
-            PermissionEnum.DEVICE_READ,
         }
     ),
     RoleEnum.VIEWER: frozenset(
         {
             PermissionEnum.CATTLE_READ,
-            PermissionEnum.USER_READ,
             PermissionEnum.COMPANY_READ,
-            PermissionEnum.DEVICE_READ,
         }
     ),
 }

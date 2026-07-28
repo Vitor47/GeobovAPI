@@ -1,6 +1,5 @@
-import secrets
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 from sqlalchemy import update
 from sqlalchemy.orm import Session
@@ -48,7 +47,6 @@ class DeviceRepository(DeviceRepositoryAbstract):
             name=data.name,
             cattle_id=data.cattle_id,
             company_id=data.company_id,
-            api_key=secrets.token_urlsafe(32),
             transmission_interval_minutes=data.transmission_interval_minutes,
         )
         self.db.add(db_device)
@@ -69,11 +67,16 @@ class DeviceRepository(DeviceRepositoryAbstract):
     def get_devices_by_company_id(self, company_id: int):
         return self.db.query(Device).filter(Device.company_id == company_id).all()
 
-    def get_device_by_api_key(self, api_key: str):
+    def get_active_device_by_serial_and_company(
+        self,
+        serial_number: str,
+        company_id: int,
+    ) -> Optional[Device]:
         return (
             self.db.query(Device)
             .filter(
-                Device.api_key == api_key,
+                Device.serial_number == serial_number,
+                Device.company_id == company_id,
                 Device.is_active.is_(True),
             )
             .first()

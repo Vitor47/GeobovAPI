@@ -16,10 +16,17 @@ CowTrack API tracks cattle in real time using LoRa GPS devices.
 
 Superusers must send the `X-Company-Id` header to scope company-bound operations.
 
-## Device telemetry
+## Admin panel
 
-LoRa devices send GPS data to `POST /api/v1/devices/ingest` using the
-`X-Device-Api-Key` header received when the device is registered.
+Browse and edit cadastral data (companies, cattle, devices, gateways, users) at `/admin`.
+Login with a superuser email/password (same credentials from setup/seed).
+
+## Gateway telemetry
+
+LoRa collars send GPS over LoRa (device serial + lat/lon). The farm gateway
+forwards samples to `POST /api/v1/gateways/ingest` using `X-Gateway-Api-Key`
+received when the gateway is registered. The API resolves
+gateway → company → device serial → cattle.
 """
 
 TAGS_METADATA = [
@@ -29,11 +36,19 @@ TAGS_METADATA = [
     },
     {
         "name": "Cattle",
-        "description": "Cattle telemetry records (location, movement, temperature).",
+        "description": "Cattle animal registration, updates, and farmer observations.",
+    },
+    {
+        "name": "Telemetry",
+        "description": "Cattle GPS telemetry records (latitude, longitude, timestamp).",
     },
     {
         "name": "Devices",
-        "description": "LoRa GPS device registration and telemetry ingestion.",
+        "description": "LoRa GPS collar registration (serial linked to cattle).",
+    },
+    {
+        "name": "Gateways",
+        "description": "LoRa receivers that authenticate and forward collar telemetry.",
     },
     {
         "name": "Companies",
@@ -41,7 +56,7 @@ TAGS_METADATA = [
     },
     {
         "name": "Health",
-        "description": "Liveness checks for PostgreSQL and Redis.",
+        "description": "Liveness checks for PostgreSQL, Redis, and MongoDB.",
     },
 ]
 
@@ -55,11 +70,11 @@ SECURITY_SCHEMES = {
             "Example: `Authorization: Bearer eyJhbGciOi...`"
         ),
     },
-    "DeviceApiKey": {
+    "GatewayApiKey": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-Device-Api-Key",
-        "description": "Device API key returned on device registration.",
+        "name": "X-Gateway-Api-Key",
+        "description": "Gateway API key returned on gateway registration.",
     },
     "CompanyHeader": {
         "type": "apiKey",

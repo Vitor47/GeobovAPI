@@ -21,9 +21,12 @@ class Company(BaseModel):
     cattle = relationship(
         "Cattle", back_populates="company", cascade="all, delete-orphan"
     )
-    cattle_data = relationship(
-        "CattleData", back_populates="company", cascade="all, delete-orphan"
-    )
     devices = relationship(
         "Device", back_populates="company", cascade="all, delete-orphan"
     )
+    gateways = relationship(
+        "Gateway", back_populates="company", cascade="all, delete-orphan"
+    )
+
+    def __str__(self) -> str:
+        return str(self.name)

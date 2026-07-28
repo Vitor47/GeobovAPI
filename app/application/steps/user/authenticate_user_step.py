@@ -9,10 +9,7 @@ class AuthenticateUserStep(BaseUseCaseStep):
         email = self.use_case.email
         password = self.use_case.password
 
-        print(email, password)
-
         user = self.use_case.repository.get_user_by_email(email)
-        print(user)
 
         if not user or not user.authenticate(password):
             raise StopUseCaseException("Invalid credentials")

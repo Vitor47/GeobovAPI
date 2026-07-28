@@ -1,3 +1,4 @@
+from app.bootstrap.admin import register_admin
 from app.bootstrap.container import init_container
 from app.bootstrap.docs import register_documentation
 from app.bootstrap.health import router as health_router
@@ -5,9 +6,12 @@ from app.bootstrap.logging import init_logging
 from app.bootstrap.middleware import register_middlewares
 from app.bootstrap.openapi import API_DESCRIPTION, DocumentedFastAPI
 from app.bootstrap.routes import register_routes
+from app.core.config import settings
 
 
 def create_app() -> DocumentedFastAPI:
+    docs_enabled = settings.is_docs_enabled
+
     app = DocumentedFastAPI(
         title="CowTrack API",
         description=API_DESCRIPTION,
@@ -19,9 +23,9 @@ def create_app() -> DocumentedFastAPI:
         license_info={
             "name": "Proprietary",
         },
-        docs_url="/docs",
-        redoc_url="/redoc",
-        openapi_url="/openapi.json",
+        docs_url="/docs" if docs_enabled else None,
+        redoc_url="/redoc" if docs_enabled else None,
+        openapi_url="/openapi.json" if docs_enabled else None,
     )
 
     init_logging()
@@ -30,6 +34,7 @@ def create_app() -> DocumentedFastAPI:
     register_documentation(app)
     app.include_router(health_router)
     register_routes(app)
+    register_admin(app)
 
     return app
 

@@ -6,6 +6,7 @@ from app.commands.services import (
     create_company_record,
     create_device_record,
     create_farmer_record,
+    run_downsample_telemetry,
     run_seed,
     run_setup,
 )
@@ -94,6 +95,30 @@ def create_device(serial: str, cattle_id: int, company_id: int, name: str | None
         create_device_record(db, serial, cattle_id, company_id, name)
     finally:
         db.close()
+
+
+@cli.command("downsample-telemetry")
+@click.option(
+    "--retention-days",
+    default=None,
+    type=int,
+    help="Delete raw samples older than this many days (default from settings).",
+)
+@click.option(
+    "--interval-minutes",
+    default=None,
+    type=int,
+    help="History bucket size in minutes (default from settings).",
+)
+def downsample_telemetry(retention_days: int | None, interval_minutes: int | None):
+    """
+    Aggregate raw GPS samples older than the retention window into 30-minute
+    history buckets and delete the originals. Intended for cron scheduling.
+    """
+    run_downsample_telemetry(
+        retention_days=retention_days,
+        interval_minutes=interval_minutes,
+    )
 
 
 if __name__ == "__main__":

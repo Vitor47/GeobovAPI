@@ -5,6 +5,7 @@ from sqlalchemy import engine_from_config, pool
 import app.adapters.models.cattle  # noqa: F401
 import app.adapters.models.company  # noqa: F401
 import app.adapters.models.device  # noqa: F401
+import app.adapters.models.gateway  # noqa: F401
 import app.adapters.models.role  # noqa: F401
 import app.adapters.models.user  # noqa: F401
 from alembic import context

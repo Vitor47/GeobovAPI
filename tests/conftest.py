@@ -2,12 +2,14 @@ import os
 from collections.abc import Generator
 from unittest.mock import Mock
 
+import mongomock
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 import app.adapters.models.cattle  # noqa: F401  # pylint: disable=unused-import
 import app.adapters.models.device  # noqa: F401  # pylint: disable=unused-import
+import app.adapters.models.gateway  # noqa: F401  # pylint: disable=unused-import
 import app.adapters.models.role  # noqa: F401  # pylint: disable=unused-import
 import app.adapters.models.user  # noqa: F401  # pylint: disable=unused-import
 from app.adapters.models.cattle import Cattle
@@ -24,6 +26,12 @@ os.environ.setdefault("REDIS_HOST", "localhost")
 os.environ.setdefault("REDIS_PORT", "6379")
 os.environ.setdefault("REDIS_DB", "0")
 os.environ.setdefault("SESSION_CACHE_TTL_SECONDS", "86400")
+os.environ.setdefault("MONGO_URL", "mongodb://localhost:27017")
+os.environ.setdefault("MONGO_DB_NAME", "cow_track_test")
+os.environ.setdefault("TELEMETRY_RAW_RETENTION_DAYS", "30")
+os.environ.setdefault("TELEMETRY_HISTORY_INTERVAL_MINUTES", "30")
+os.environ.setdefault("ADMIN_ENABLED", "false")
+os.environ.setdefault("APP_ENV", "local")
 os.environ.setdefault("APP_PORT", "8000")
 os.environ.setdefault("SUPERUSER_EMAIL", "admin@example.com")
 os.environ.setdefault("SUPERUSER_PASSWORD", "changeme")
@@ -47,6 +55,13 @@ def db_session(db_engine) -> Generator[Session, None, None]:
         yield session
     finally:
         session.close()
+
+
+@pytest.fixture
+def mongo_db():
+    client = mongomock.MongoClient()
+    yield client["cow_track_test"]
+    client.close()
 
 
 @pytest.fixture

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi_utils.cbv import cbv
 
 from app.adapters.container import Container
-from app.core.auth.deps import CanReadCompanyDep
+from app.core.auth.deps import CanReadCompanyDep, CompanyIdDep
 from app.core.cache_utils.user_cache import CachedUser
 from app.domain.use_cases.exceptions import StopUseCaseException
 from app.presentation.api.v1.schemas.common import ErrorResponse
@@ -24,19 +24,22 @@ class CompanyController:
         self.get_company_use_case_factory = get_company_use_case_factory
 
     @router.get(
-        "/{company_id}",
+        "/me",
         response_model=CompanyResponse,
-        summary="Get company",
-        description="Returns company details. Requires `company:read`.",
+        summary="Get current company",
+        description=(
+            "Returns the company scoped to the authenticated user "
+            "(or `X-Company-Id` for superusers). Requires `company:read`."
+        ),
         responses={
             401: {"model": ErrorResponse, "description": "Missing or invalid JWT."},
             403: {"model": ErrorResponse, "description": "Missing permission."},
             404: {"model": ErrorResponse, "description": "Company not found."},
         },
     )
-    def get_company(
+    def get_my_company(
         self,
-        company_id: int,
+        company_id: int = CompanyIdDep,
         _: CachedUser = CanReadCompanyDep,
     ):
         use_case = self.get_company_use_case_factory(
@@ -47,5 +50,8 @@ class CompanyController:
             use_case.run()
         except StopUseCaseException as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
+
+        if not use_case.data:
+            raise HTTPException(status_code=404, detail="Company not found")
 
         return use_case.data

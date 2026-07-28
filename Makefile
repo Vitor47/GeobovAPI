@@ -35,7 +35,7 @@ setup: ## Initialize database, roles, and superuser (local Python)
 seed: ## Seed idempotent dev sample data (local Python)
 	$(PYTHON) -m app.commands seed
 
-docker-up: ## Start production-like Docker stack (Postgres + Redis + API)
+docker-up: ## Start production-like Docker stack (Postgres + Redis + Mongo + API)
 	docker compose up -d --build
 
 docker-dev: ## Start dev stack with hot reload and volume mount
@@ -58,6 +58,9 @@ docker-setup: ## Run DB setup inside the API container
 
 docker-seed: ## Seed idempotent dev sample data inside Docker
 	docker compose exec api python -m app.commands seed
+
+docker-downsample: ## Run telemetry downsampling cron job inside Docker
+	docker compose exec api python -m app.commands downsample-telemetry
 
 pre-commit-install: ## Install pre-commit hooks
 	pre-commit install

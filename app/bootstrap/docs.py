@@ -1,11 +1,21 @@
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from scalar_fastapi import Layout, Theme, get_scalar_api_reference
+
+from app.core.config import settings
 
 
 def register_documentation(app: FastAPI) -> None:
+    if not settings.is_docs_enabled:
+
+        @app.get("/", include_in_schema=False)
+        async def root_health() -> JSONResponse:
+            return JSONResponse({"status": "ok", "service": "CowTrack API"})
+
+        return
+
     @app.get("/", include_in_schema=False)
-    async def root() -> RedirectResponse:
+    async def root_docs() -> RedirectResponse:
         return RedirectResponse(url="/docs/scalar")
 
     @app.get("/docs/scalar", include_in_schema=False)

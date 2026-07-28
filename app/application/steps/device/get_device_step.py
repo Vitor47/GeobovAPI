@@ -17,7 +17,6 @@ class GetDeviceStep(BaseUseCaseStep):
             name=device.name,
             cattle_id=device.cattle_id,
             company_id=device.company_id,
-            api_key=device.api_key,
             is_active=device.is_active,
             transmission_interval_minutes=device.transmission_interval_minutes,
             last_seen_at=device.last_seen_at,

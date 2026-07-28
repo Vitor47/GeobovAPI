@@ -9,3 +9,6 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: ${REDIS_DB:-0}
+      MONGO_URL: mongodb://mongo:27017
+      MONGO_DB_NAME: ${MONGO_DB_NAME:-cow_track}
+      APP_ENV: local

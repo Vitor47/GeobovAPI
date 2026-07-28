@@ -8,27 +8,41 @@ from app.domain.enums.cattle_enum import GenderEnum
 class CattleCreateDTO:
     tag: str
     name: str
-    description: str | None
-    birth_date: datetime | None
-    weight: float | None
-    breed: str | None
-    gender: GenderEnum | None
-    color: str | None
-    notes: str | None
     company_id: int
+    description: str | None = None
+    birth_date: datetime | None = None
+    weight: float | None = None
+    breed: str | None = None
+    gender: GenderEnum | None = None
+    color: str | None = None
+    notes: str | None = None
 
 
 @dataclass
-class CattleDataCreateDTO:
-    cattle_id: int
-    lat: float
-    lon: float
-    movement: float
-    temperature: float
+class CattleUpdateDTO:
+    tag: str | None = None
+    name: str | None = None
+    description: str | None = None
+    birth_date: datetime | None = None
+    weight: float | None = None
+    breed: str | None = None
+    gender: GenderEnum | None = None
+    color: str | None = None
+    notes: str | None = None
+    is_active: bool | None = None
 
 
 @dataclass
 class CattleResponseDTO:
     id: int
     tag: str
+    name: str
     company_id: int
+    is_active: bool
+    description: str | None = None
+    birth_date: datetime | None = None
+    weight: float | None = None
+    breed: str | None = None
+    gender: GenderEnum | None = None
+    color: str | None = None
+    notes: str | None = None

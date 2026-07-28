@@ -1,16 +1,13 @@
-from app.application.dtos.cattle_data_dto import CattleDataResponseDTO
+from app.application.steps.cattle.cattle_mapper import cattle_to_response_dto
 from app.domain.steps.base_use_case_step import BaseUseCaseStep
+from app.domain.use_cases.exceptions import StopUseCaseException
 
 
 class CreateCattleStep(BaseUseCaseStep):
     def _run(self):
-        cattle_data = self.use_case.repository.create_cattle(self.use_case.payload)
+        try:
+            cattle = self.use_case.repository.create_cattle(self.use_case.payload)
+        except ValueError as error:
+            raise StopUseCaseException(str(error)) from error
 
-        self.use_case.data = CattleDataResponseDTO(
-            id=cattle_data.id,
-            cattle_id=cattle_data.cattle_id,
-            lat=cattle_data.lat,
-            lon=cattle_data.lon,
-            movement=cattle_data.movement,
-            temperature=cattle_data.temperature,
-        )
+        self.use_case.data = cattle_to_response_dto(cattle)

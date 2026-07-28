@@ -65,11 +65,14 @@ Import from `app.core.auth.deps`:
 |--------------------------|-------------------------------|---------|
 | `CanCreateCattleDep` | `CanCreateCattle` | `cattle:create` |
 | `CanReadCattleDep` | `CanReadCattle` | `cattle:read` |
+| `CanUpdateCattleDep` | `CanUpdateCattle` | `cattle:update` |
 | `CanCreateUserDep` | `CanCreateUser` | `user:create` |
 | `CanReadUserDep` | `CanReadUser` | `user:read` |
 | `CanReadCompanyDep` | `CanReadCompany` | `company:read` |
 | `CanCreateDeviceDep` | `CanCreateDevice` | `device:create` |
 | `CanReadDeviceDep` | `CanReadDevice` | `device:read` |
+| `CanCreateGatewayDep` | `CanCreateGateway` | `gateway:create` |
+| `CanReadGatewayDep` | `CanReadGateway` | `gateway:read` |
 | `CurrentUserDep` | `CurrentUser` | authenticated user |
 | `SuperUserDep` | `SuperUser` | superuser only |
 | `CompanyIdDep` | `CompanyId` | resolved company scope |

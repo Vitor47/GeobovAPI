@@ -34,3 +34,13 @@ packages = ["app", "tests"]
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["wtforms", "wtforms.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["app.bootstrap.admin.views"]
+# sqladmin ModelView attrs expect InstrumentedAttribute; SQLAlchemy Column
+# annotations on declarative models do not match those stubs.
+disable_error_code = ["list-item", "arg-type"]

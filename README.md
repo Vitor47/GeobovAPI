@@ -406,10 +406,13 @@ Endpoint → UseCase.run() → Step._run() → Repository → ORM
 | `POST` | `/api/v1/cattle/` | Bearer | Create cattle telemetry |
 | `GET` | `/api/v1/cattle/` | Bearer | List cattle data |
 | `GET` | `/api/v1/cattle/{id}` | Bearer | Get cattle data by ID |
-| `POST` | `/api/v1/devices/` | Bearer | Register LoRa device |
+| `POST` | `/api/v1/devices/` | Bearer | Register LoRa collar (serial → cattle) |
 | `GET` | `/api/v1/devices/` | Bearer | List devices |
 | `GET` | `/api/v1/devices/{id}` | Bearer | Get device |
-| `POST` | `/api/v1/devices/ingest` | `X-Device-Api-Key` | Ingest GPS telemetry |
+| `POST` | `/api/v1/gateways/` | Bearer | Register LoRa gateway (returns `api_key`) |
+| `GET` | `/api/v1/gateways/` | Bearer | List gateways |
+| `GET` | `/api/v1/gateways/{id}` | Bearer | Get gateway |
+| `POST` | `/api/v1/gateways/ingest` | `X-Gateway-Api-Key` | Ingest GPS via gateway + device serial |
 | `GET` | `/health` | Public | DB + Redis health check |
 
 ### Interactive documentation
@@ -421,7 +424,7 @@ Endpoint → UseCase.run() → Step._run() → Repository → ORM
 | http://localhost:8000/redoc | ReDoc |
 | http://localhost:8000/openapi.json | OpenAPI 3 schema |
 
-Documentation is powered by [Scalar](https://scalar.com) via `scalar-fastapi`, with JWT and device API key security schemes, request examples, and per-endpoint descriptions.
+Documentation is powered by [Scalar](https://scalar.com) via `scalar-fastapi`, with JWT and gateway API key security schemes, request examples, and per-endpoint descriptions.
 
 ---
 

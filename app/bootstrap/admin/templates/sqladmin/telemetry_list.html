@@ -1,0 +1,102 @@
+{% extends "sqladmin/layout.html" %}
+{% block content %}
+<div class="col-12">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Telemetry (MongoDB) — read only</h3>
+    </div>
+    <div class="card-body border-bottom py-3">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-2">
+          <label class="form-label">Company ID</label>
+          <input type="number" name="company_id" value="{{ filters.company_id or '' }}" class="form-control" placeholder="e.g. 1">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Cattle ID</label>
+          <input type="number" name="cattle_id" value="{{ filters.cattle_id or '' }}" class="form-control" placeholder="e.g. 10">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Source</label>
+          <select name="source" class="form-select">
+            <option value="raw" {% if filters.source == 'raw' %}selected{% endif %}>Raw (high frequency)</option>
+            <option value="history" {% if filters.source == 'history' %}selected{% endif %}>History (30 min)</option>
+            <option value="all" {% if filters.source == 'all' %}selected{% endif %}>All</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Page size</label>
+          <select name="page_size" class="form-select">
+            {% for size in [25, 50, 100, 200] %}
+            <option value="{{ size }}" {% if filters.page_size == size %}selected{% endif %}>{{ size }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-primary w-100">Filter</button>
+        </div>
+      </form>
+      <p class="text-secondary mt-2 mb-0">
+        Showing {{ rows|length }} of {{ total }} matching documents (page {{ filters.page }} / {{ total_pages }}).
+      </p>
+    </div>
+    <div class="table-responsive">
+      <table class="table card-table table-vcenter text-nowrap table-striped">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Source</th>
+            <th>Company</th>
+            <th>Cattle</th>
+            <th>Lat</th>
+            <th>Lon</th>
+            <th>Timestamp (UTC)</th>
+            <th>Samples</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td><code>{{ row.id }}</code></td>
+            <td>
+              {% if row.source == 'history' %}
+              <span class="badge bg-azure-lt">history</span>
+              {% else %}
+              <span class="badge bg-green-lt">raw</span>
+              {% endif %}
+            </td>
+            <td>{{ row.company_label }}</td>
+            <td>{{ row.cattle_label }}</td>
+            <td>{{ '%.6f'|format(row.lat) }}</td>
+            <td>{{ '%.6f'|format(row.lon) }}</td>
+            <td>{{ row.timestamp }}</td>
+            <td>{{ row.sample_count or '—' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-secondary text-center py-4">No telemetry found for these filters.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if total_pages > 1 %}
+    <div class="card-footer d-flex justify-content-between">
+      {% if filters.page > 1 %}
+      <a class="btn btn-outline-secondary"
+         href="?company_id={{ filters.company_id or '' }}&cattle_id={{ filters.cattle_id or '' }}&source={{ filters.source }}&page_size={{ filters.page_size }}&page={{ filters.page - 1 }}">
+        Previous
+      </a>
+      {% else %}
+      <span></span>
+      {% endif %}
+      {% if filters.page < total_pages %}
+      <a class="btn btn-outline-secondary"
+         href="?company_id={{ filters.company_id or '' }}&cattle_id={{ filters.cattle_id or '' }}&source={{ filters.source }}&page_size={{ filters.page_size }}&page={{ filters.page + 1 }}">
+        Next
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

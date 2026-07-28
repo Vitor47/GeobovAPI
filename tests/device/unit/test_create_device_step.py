@@ -27,7 +27,6 @@ def mock_device_record():
     record.name = "GPS Collar 1"
     record.cattle_id = 1
     record.company_id = 1
-    record.api_key = "test-api-key"
     record.is_active = True
     record.transmission_interval_minutes = 5
     record.last_seen_at = None
@@ -49,5 +48,4 @@ def test_create_device_step_sets_response_dto_when_device_is_created(
     CreateDeviceStep(use_case=use_case).run()
 
     assert use_case.data.serial_number == "LORA-001"
-    assert use_case.data.api_key == "test-api-key"
     mock_repository.create_device.assert_called_once_with(device_create_payload)

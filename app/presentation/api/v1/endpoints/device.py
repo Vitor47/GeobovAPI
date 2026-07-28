@@ -1,14 +1,9 @@
-from typing import Annotated
-
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi_utils.cbv import cbv
 
 from app.adapters.container import Container
-from app.application.dtos.device_dto import (
-    DeviceCreateDTO,
-    DeviceTelemetryIngestDTO,
-)
+from app.application.dtos.device_dto import DeviceCreateDTO
 from app.core.auth.deps import (
     CanCreateDeviceDep,
     CanReadDeviceDep,
@@ -17,12 +12,7 @@ from app.core.auth.deps import (
 from app.core.cache_utils.user_cache import CachedUser
 from app.domain.use_cases.exceptions import StopUseCaseException
 from app.presentation.api.v1.schemas.common import ErrorResponse
-from app.presentation.api.v1.schemas.device import (
-    DeviceCreate,
-    DeviceResponse,
-    DeviceTelemetryIngest,
-    DeviceTelemetryResponse,
-)
+from app.presentation.api.v1.schemas.device import DeviceCreate, DeviceResponse
 
 router = APIRouter(tags=["Devices"])
 
@@ -41,22 +31,18 @@ class DeviceController:
         get_device_use_case_factory=Depends(
             Provide[Container.get_device_use_case.provider]
         ),
-        ingest_telemetry_use_case_factory=Depends(
-            Provide[Container.ingest_telemetry_use_case.provider]
-        ),
     ):
         self.create_device_use_case_factory = create_device_use_case_factory
         self.get_devices_use_case_factory = get_devices_use_case_factory
         self.get_device_use_case_factory = get_device_use_case_factory
-        self.ingest_telemetry_use_case_factory = ingest_telemetry_use_case_factory
 
     @router.post(
         "/",
         response_model=DeviceResponse,
         summary="Register device",
         description=(
-            "Links a LoRa GPS device to a cattle. Returns an `api_key` used "
-            "for telemetry ingestion. Requires `device:create`."
+            "Links a LoRa GPS collar to a cattle. The collar serial is used by "
+            "gateways when forwarding telemetry. Requires `device:create`."
         ),
         responses={
             400: {"model": ErrorResponse, "description": "Validation error."},
@@ -146,47 +132,5 @@ class DeviceController:
 
         if not use_case.data:
             raise HTTPException(status_code=404, detail="Device not found")
-
-        return use_case.data
-
-    @router.post(
-        "/ingest",
-        response_model=DeviceTelemetryResponse,
-        summary="Ingest telemetry",
-        description=(
-            "LoRa device endpoint. Creates cattle telemetry and updates "
-            "`last_seen_at`. Authenticated via `X-Device-Api-Key` header."
-        ),
-        responses={
-            401: {"model": ErrorResponse, "description": "Invalid device API key."},
-        },
-    )
-    def ingest_telemetry(
-        self,
-        data: DeviceTelemetryIngest,
-        x_device_api_key: Annotated[
-            str,
-            Header(
-                alias="X-Device-Api-Key",
-                description="Device API key from registration.",
-            ),
-        ],
-    ):
-        payload = DeviceTelemetryIngestDTO(
-            lat=data.lat,
-            lon=data.lon,
-            movement=data.movement,
-            temperature=data.temperature,
-        )
-
-        use_case = self.ingest_telemetry_use_case_factory(
-            api_key=x_device_api_key,
-            payload=payload,
-        )
-
-        try:
-            use_case.run()
-        except StopUseCaseException as error:
-            raise HTTPException(status_code=401, detail=str(error)) from error
 
         return use_case.data

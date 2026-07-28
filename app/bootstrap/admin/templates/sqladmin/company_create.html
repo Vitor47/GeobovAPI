@@ -1,0 +1,15 @@
+{% extends "sqladmin/create.html" %}
+
+{% block tail %}
+{{ super() }}
+{% include "sqladmin/company_address_lookup_script.html" %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    if (window.CowTrackCompanyAddressLookup) {
+      window.CowTrackCompanyAddressLookup.init({
+        lookupUrl: "{{ url_for('admin:view-company-address_lookup') }}"
+      });
+    }
+  });
+</script>
+{% endblock %}

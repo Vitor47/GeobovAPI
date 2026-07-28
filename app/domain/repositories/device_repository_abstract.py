@@ -61,16 +61,20 @@ class DeviceRepositoryAbstract(ABC):
         """
 
     @abstractmethod
-    def get_device_by_api_key(
+    def get_active_device_by_serial_and_company(
         self,
-        api_key: str,
+        serial_number: str,
+        company_id: int,
     ) -> Optional[Device]:
         """
-        Retrieve an active device by its API key for telemetry ingestion.
+        Retrieve an active collar device by serial number within a company.
+
+        Used by gateway ingest to resolve LoRa identity to cattle.
 
         Args:
             db (Session): Active SQLAlchemy database session.
-            api_key (str): Device authentication key.
+            serial_number (str): Physical device serial from the LoRa packet.
+            company_id (int): Company owning the gateway and device.
 
         Returns:
             Optional[Device]: The found record, or None if not found.

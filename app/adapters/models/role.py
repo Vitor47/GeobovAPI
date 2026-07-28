@@ -9,3 +9,6 @@ class Role(BaseModel):
 
     name = Column(String, unique=True, nullable=False)
     users = relationship("User", back_populates="role")
+
+    def __str__(self) -> str:
+        return str(self.name)

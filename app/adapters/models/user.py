@@ -24,6 +24,9 @@ class User(BaseModel):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
     company = relationship("Company", back_populates="users")
 
+    def __str__(self) -> str:
+        return f"{self.full_name} <{self.email}>"
+
     def set_password(self, password: str) -> None:
         object.__setattr__(self, "_password_hash", self.pwd_context.hash(password))
 

@@ -53,11 +53,14 @@ def resolve_company_id(
 # Plain Depends aliases — use with @cbv controllers
 CanCreateCattleDep = Depends(require_permission(PermissionEnum.CATTLE_CREATE))
 CanReadCattleDep = Depends(require_permission(PermissionEnum.CATTLE_READ))
+CanUpdateCattleDep = Depends(require_permission(PermissionEnum.CATTLE_UPDATE))
 CanCreateUserDep = Depends(require_permission(PermissionEnum.USER_CREATE))
 CanReadUserDep = Depends(require_permission(PermissionEnum.USER_READ))
 CanReadCompanyDep = Depends(require_permission(PermissionEnum.COMPANY_READ))
 CanCreateDeviceDep = Depends(require_permission(PermissionEnum.DEVICE_CREATE))
 CanReadDeviceDep = Depends(require_permission(PermissionEnum.DEVICE_READ))
+CanCreateGatewayDep = Depends(require_permission(PermissionEnum.GATEWAY_CREATE))
+CanReadGatewayDep = Depends(require_permission(PermissionEnum.GATEWAY_READ))
 CurrentUserDep = Depends(get_current_user)
 SuperUserDep = Depends(require_superuser)
 CompanyIdDep = Depends(resolve_company_id)
@@ -68,8 +71,11 @@ SuperUser = Annotated[CachedUser, SuperUserDep]
 CompanyId = Annotated[int, CompanyIdDep]
 CanCreateCattle = Annotated[CachedUser, CanCreateCattleDep]
 CanReadCattle = Annotated[CachedUser, CanReadCattleDep]
+CanUpdateCattle = Annotated[CachedUser, CanUpdateCattleDep]
 CanCreateUser = Annotated[CachedUser, CanCreateUserDep]
 CanReadUser = Annotated[CachedUser, CanReadUserDep]
 CanReadCompany = Annotated[CachedUser, CanReadCompanyDep]
 CanCreateDevice = Annotated[CachedUser, CanCreateDeviceDep]
 CanReadDevice = Annotated[CachedUser, CanReadDeviceDep]
+CanCreateGateway = Annotated[CachedUser, CanCreateGatewayDep]
+CanReadGateway = Annotated[CachedUser, CanReadGatewayDep]

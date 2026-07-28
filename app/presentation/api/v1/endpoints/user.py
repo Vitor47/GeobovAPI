@@ -4,7 +4,7 @@ from fastapi_utils.cbv import cbv
 
 from app.adapters.container import Container
 from app.application.dtos.user_dto import UserLoginDTO
-from app.core.auth.deps import CanCreateUserDep, CurrentUserDep
+from app.core.auth.deps import CanCreateUserDep, CompanyIdDep, CurrentUserDep
 from app.core.cache_utils.user_cache import CachedUser, invalidate_user_session
 from app.domain.use_cases.exceptions import StopUseCaseException
 from app.presentation.api.v1.schemas.common import ErrorResponse, MessageResponse
@@ -49,9 +49,10 @@ class UserController:
     def create_user(
         self,
         data: UserCreate,
-        current_user: CachedUser = CanCreateUserDep,
+        company_id: int = CompanyIdDep,
+        _: CachedUser = CanCreateUserDep,
     ):
-        data.company_id = current_user.company_id
+        data.company_id = company_id
 
         use_case = self.create_user_use_case_factory(
             payload=data,

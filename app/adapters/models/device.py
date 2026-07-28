@@ -9,7 +9,6 @@ class Device(BaseModel):
 
     serial_number = Column(String, unique=True, nullable=False, index=True)
     name = Column(String, nullable=True)
-    api_key = Column(String, unique=True, nullable=False, index=True)
 
     cattle_id = Column(
         Integer,
@@ -25,3 +24,9 @@ class Device(BaseModel):
 
     cattle = relationship("Cattle", back_populates="device")
     company = relationship("Company", back_populates="devices")
+
+    def __str__(self) -> str:
+        label = self.name or self.serial_number
+        return (
+            f"{self.serial_number} ({label})" if self.name else str(self.serial_number)
+        )

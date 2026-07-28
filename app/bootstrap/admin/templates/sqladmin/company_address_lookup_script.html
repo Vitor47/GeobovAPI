@@ -1,0 +1,124 @@
+<script>
+(function () {
+  function field(name) {
+    return document.querySelector('[name="' + name + '"]');
+  }
+
+  function digitsOnly(value) {
+    return (value || "").replace(/\D/g, "");
+  }
+
+  function isBrazil(countryValue) {
+    var raw = (countryValue || "").trim().toUpperCase();
+    if (!raw) {
+      return true; // default to Brazil when country is empty
+    }
+    return raw === "BR" || raw === "BRA" || raw === "BRAZIL" || raw === "BRASIL";
+  }
+
+  function setIfEmptyOrForce(input, value, force) {
+    if (!input || value == null || value === "") {
+      return;
+    }
+    if (force || !input.value.trim()) {
+      input.value = value;
+    }
+  }
+
+  function showHint(message, isError) {
+    var zip = field("zip_code");
+    if (!zip) {
+      return;
+    }
+    var hintId = "cowtrack-cep-hint";
+    var hint = document.getElementById(hintId);
+    if (!hint) {
+      hint = document.createElement("div");
+      hint.id = hintId;
+      hint.className = "form-hint";
+      zip.parentElement.appendChild(hint);
+    }
+    hint.textContent = message || "";
+    hint.style.color = isError ? "#d63939" : "#626976";
+  }
+
+  function lookup(lookupUrl) {
+    var zipInput = field("zip_code");
+    var countryInput = field("country");
+    if (!zipInput) {
+      return;
+    }
+
+    var postalCode = zipInput.value.trim();
+    var country = countryInput ? countryInput.value.trim() : "";
+    if (!postalCode) {
+      showHint("");
+      return;
+    }
+    if (!isBrazil(country)) {
+      showHint("Postal lookup is only available for Brazil for now.");
+      return;
+    }
+    if (digitsOnly(postalCode).length !== 8) {
+      showHint("Enter a valid 8-digit Brazilian CEP.");
+      return;
+    }
+
+    showHint("Looking up CEP…");
+    var url =
+      lookupUrl +
+      "?postal_code=" +
+      encodeURIComponent(postalCode) +
+      "&country=" +
+      encodeURIComponent(country || "BR");
+
+    fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } })
+      .then(function (response) {
+        return response.json().then(function (body) {
+          return { ok: response.ok, status: response.status, body: body };
+        });
+      })
+      .then(function (result) {
+        if (result.status === 404 || (result.body && result.body.found === false)) {
+          showHint("CEP not found.", true);
+          return;
+        }
+        if (result.status === 501) {
+          showHint(result.body.detail || "Country not supported yet.", true);
+          return;
+        }
+        if (!result.ok || !result.body || !result.body.found) {
+          showHint((result.body && result.body.detail) || "Could not look up CEP.", true);
+          return;
+        }
+
+        var data = result.body;
+        setIfEmptyOrForce(field("address"), data.address_line || data.street, true);
+        setIfEmptyOrForce(field("city"), data.city, true);
+        setIfEmptyOrForce(field("state"), data.state, true);
+        setIfEmptyOrForce(field("zip_code"), data.postal_code, true);
+        setIfEmptyOrForce(field("country"), "Brazil", true);
+        showHint("Address filled from ViaCEP.");
+      })
+      .catch(function () {
+        showHint("Could not look up CEP.", true);
+      });
+  }
+
+  window.CowTrackCompanyAddressLookup = {
+    init: function (options) {
+      var zipInput = field("zip_code");
+      if (!zipInput || !options || !options.lookupUrl) {
+        return;
+      }
+      zipInput.addEventListener("blur", function () {
+        lookup(options.lookupUrl);
+      });
+      zipInput.setAttribute(
+        "placeholder",
+        zipInput.getAttribute("placeholder") || "00000-000"
+      );
+    }
+  };
+})();
+</script>
