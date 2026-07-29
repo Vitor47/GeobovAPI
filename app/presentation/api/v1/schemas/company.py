@@ -19,6 +19,26 @@ class CompanyResponse(BaseModel):
     )
 
 
+class CompanyListResponse(BaseModel):
+    items: list[CompanyResponse]
+    total: int
+    page: int
+    page_size: int
+    has_more: bool
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "items": [{"id": 1, "name": "Fazenda São João"}],
+                "total": 42,
+                "page": 1,
+                "page_size": 20,
+                "has_more": True,
+            }
+        }
+    )
+
+
 class CompanyWithUsers(BaseModel):
     id: int
     name: str

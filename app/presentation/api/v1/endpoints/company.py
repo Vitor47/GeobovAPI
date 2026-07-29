@@ -1,5 +1,5 @@
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_utils.cbv import cbv
 
 from app.adapters.container import Container
@@ -7,7 +7,7 @@ from app.core.auth.deps import CanReadCompanyDep, CompanyIdDep
 from app.core.cache_utils.user_cache import CachedUser
 from app.domain.use_cases.exceptions import StopUseCaseException
 from app.presentation.api.v1.schemas.common import ErrorResponse
-from app.presentation.api.v1.schemas.company import CompanyResponse
+from app.presentation.api.v1.schemas.company import CompanyListResponse, CompanyResponse
 
 router = APIRouter(tags=["Companies"])
 
@@ -29,23 +29,34 @@ class CompanyController:
 
     @router.get(
         "/",
-        response_model=list[CompanyResponse],
+        response_model=CompanyListResponse,
         summary="List companies",
         description=(
-            "Superusers receive all farms. Regular users receive only the farms "
-            "they belong to (user_companies memberships)."
+            "Paginated farm list with optional name search (`q`). "
+            "Superusers receive all farms. Regular users receive only memberships."
         ),
         responses={
             401: {"model": ErrorResponse, "description": "Missing or invalid JWT."},
             403: {"model": ErrorResponse, "description": "Missing permission."},
         },
     )
-    def list_companies(self, current_user: CachedUser = CanReadCompanyDep):
+    def list_companies(
+        self,
+        current_user: CachedUser = CanReadCompanyDep,
+        q: str | None = Query(default=None, description="Filter by farm name."),
+        page: int = Query(default=1, ge=1),
+        page_size: int = Query(default=20, ge=1, le=100),
+    ):
         company_ids = None
         if not current_user.is_superuser:
             company_ids = list(current_user.company_ids or [])
 
-        use_case = self.list_companies_use_case_factory(company_ids=company_ids)
+        use_case = self.list_companies_use_case_factory(
+            company_ids=company_ids,
+            query=q,
+            page=page,
+            page_size=page_size,
+        )
 
         try:
             use_case.run()

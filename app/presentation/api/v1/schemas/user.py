@@ -52,6 +52,12 @@ class UserLogin(BaseModel):
     )
 
 
+class SwitchCompanyRequest(BaseModel):
+    company_id: int = Field(description="Farm to activate in a new JWT.")
+
+    model_config = ConfigDict(json_schema_extra={"example": {"company_id": 2}})
+
+
 class UserLoginResponse(BaseModel):
     access_token: str | None = Field(default=None, description="JWT bearer token.")
     token_type: str | None = Field(default=None, examples=["bearer"])
@@ -60,7 +66,7 @@ class UserLoginResponse(BaseModel):
     full_name: str | None = None
     company_id: int | None = Field(
         default=None,
-        description="Default farm used when X-Company-Id is omitted.",
+        description="Active farm embedded in the JWT.",
     )
     company_ids: list[int] | None = Field(
         default=None,

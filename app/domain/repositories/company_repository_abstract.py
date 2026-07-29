@@ -34,6 +34,17 @@ class CompanyRepositoryAbstract(ABC):
         """Retrieve companies filtered by IDs."""
 
     @abstractmethod
+    def search_companies(
+        self,
+        *,
+        company_ids: Sequence[int] | None = None,
+        query: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[List[Company], int]:
+        """Search and paginate companies. Returns (items, total)."""
+
+    @abstractmethod
     def delete_company(
         self,
         company_id: int,
