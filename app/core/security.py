@@ -7,11 +7,13 @@ from app.core.config import settings
 
 
 def build_token_payload(user) -> dict[str, Any]:
+    company_ids = list(getattr(user, "company_ids", []) or [])
     return {
         "sub": str(user.id),
         "email": user.email,
         "full_name": user.full_name,
         "company_id": user.company_id,
+        "company_ids": company_ids,
         "role": user.role.name if user.role else None,
         "is_superuser": bool(getattr(user, "is_superuser", False)),
     }

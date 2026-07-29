@@ -17,6 +17,7 @@ class AuthenticateUserStep(BaseUseCaseStep):
         cache_user_session(user)
 
         token = create_access_token(build_token_payload(user))
+        company_ids = list(getattr(user, "company_ids", []) or [])
 
         self.use_case.data = {
             "access_token": token,
@@ -25,6 +26,7 @@ class AuthenticateUserStep(BaseUseCaseStep):
             "email": user.email,
             "full_name": user.full_name,
             "company_id": user.company_id,
+            "company_ids": company_ids,
             "role": user.role.name if user.role else None,
             "is_superuser": user.is_superuser,
         }

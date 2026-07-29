@@ -20,8 +20,39 @@ class CompanyController:
         get_company_use_case_factory=Depends(
             Provide[Container.get_company_use_case.provider]
         ),
+        list_companies_use_case_factory=Depends(
+            Provide[Container.list_companies_use_case.provider]
+        ),
     ):
         self.get_company_use_case_factory = get_company_use_case_factory
+        self.list_companies_use_case_factory = list_companies_use_case_factory
+
+    @router.get(
+        "/",
+        response_model=list[CompanyResponse],
+        summary="List companies",
+        description=(
+            "Superusers receive all farms. Regular users receive only the farms "
+            "they belong to (user_companies memberships)."
+        ),
+        responses={
+            401: {"model": ErrorResponse, "description": "Missing or invalid JWT."},
+            403: {"model": ErrorResponse, "description": "Missing permission."},
+        },
+    )
+    def list_companies(self, current_user: CachedUser = CanReadCompanyDep):
+        company_ids = None
+        if not current_user.is_superuser:
+            company_ids = list(current_user.company_ids or [])
+
+        use_case = self.list_companies_use_case_factory(company_ids=company_ids)
+
+        try:
+            use_case.run()
+        except StopUseCaseException as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
+        return use_case.data
 
     @router.get(
         "/me",
@@ -29,7 +60,8 @@ class CompanyController:
         summary="Get current company",
         description=(
             "Returns the company scoped to the authenticated user "
-            "(or `X-Company-Id` for superusers). Requires `company:read`."
+            "(via X-Company-Id for multi-farm users and superusers). "
+            "Requires company:read."
         ),
         responses={
             401: {"model": ErrorResponse, "description": "Missing or invalid JWT."},

@@ -5,11 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.adapters.database.session_factory import SessionFactory
-from app.adapters.models.cattle import Cattle
-from app.adapters.models.company import Company
-from app.adapters.models.device import Device
-from app.adapters.models.role import Role
-from app.adapters.models.user import User
+from app.adapters.models import Cattle, Company, Device, Role, User
 from app.adapters.repositories.cattle_data_repository import CattleDataRepository
 from app.adapters.repositories.device_repository import DeviceRepository
 from app.application.dtos.device_dto import DeviceCreateDTO
@@ -125,6 +121,7 @@ def create_farmer_record(
         is_superuser=False,
     )
     user.set_password(password)
+    user.companies.append(company)
     db.add(user)
     db.commit()
     db.refresh(user)

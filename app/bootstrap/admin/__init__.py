@@ -2,6 +2,7 @@ from pathlib import Path
 
 from sqladmin import Admin
 
+from app.adapters.models import Gateway as _Gateway  # noqa: F401
 from app.bootstrap.admin.auth import AdminAuth
 from app.bootstrap.admin.telemetry_view import TelemetryReadAdmin
 from app.bootstrap.admin.views import (
@@ -14,6 +15,9 @@ from app.bootstrap.admin.views import (
 )
 from app.core.config import settings
 from app.core.database import engine
+
+# Ensure all ORM mappers (incl. Gateway) are registered before admin views.
+_ = _Gateway
 
 _TEMPLATES_DIR = str(Path(__file__).resolve().parent / "templates")
 

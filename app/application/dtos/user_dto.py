@@ -11,6 +11,7 @@ class LoginResponseDTO(TypedDict):
     email: str
     full_name: str
     company_id: int | None
+    company_ids: list[int]
     role: str | None
     is_superuser: bool
 

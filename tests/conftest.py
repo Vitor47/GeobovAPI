@@ -7,13 +7,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import app.adapters.models.cattle  # noqa: F401  # pylint: disable=unused-import
-import app.adapters.models.device  # noqa: F401  # pylint: disable=unused-import
-import app.adapters.models.gateway  # noqa: F401  # pylint: disable=unused-import
-import app.adapters.models.role  # noqa: F401  # pylint: disable=unused-import
-import app.adapters.models.user  # noqa: F401  # pylint: disable=unused-import
-from app.adapters.models.cattle import Cattle
-from app.adapters.models.company import Company
+from app.adapters.models import Cattle, Company
 from app.core.database import Base
 from app.domain.enums.role_enum import RoleEnum
 
@@ -87,6 +81,7 @@ def mock_admin_user():
     user = Mock()
     user.id = 1
     user.company_id = 1
+    user.company_ids = [1]
     user.full_name = "Admin User"
     user.email = "admin@test.com"
     user.is_superuser = False

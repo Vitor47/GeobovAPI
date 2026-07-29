@@ -18,6 +18,7 @@ def test_build_token_payload_includes_company_and_superuser(mocker):
     user.email = "admin@test.com"
     user.full_name = "Admin"
     user.company_id = 10
+    user.company_ids = [10, 20]
     user.is_superuser = True
     user.role = Mock()
     user.role.name = "admin"
@@ -26,6 +27,7 @@ def test_build_token_payload_includes_company_and_superuser(mocker):
 
     assert payload["sub"] == "1"
     assert payload["company_id"] == 10
+    assert payload["company_ids"] == [10, 20]
     assert payload["is_superuser"] is True
     assert payload["role"] == "admin"
 
@@ -37,6 +39,7 @@ def test_get_cached_session_returns_user_when_session_exists(mocker):
         "email": "admin@test.com",
         "full_name": "Admin",
         "company_id": 10,
+        "company_ids": [10, 20],
         "role": "admin",
         "is_superuser": False,
     }
@@ -49,6 +52,7 @@ def test_get_cached_session_returns_user_when_session_exists(mocker):
 
     assert cached.id == 1
     assert cached.company_id == 10
+    assert cached.company_ids == [10, 20]
     assert cached.role == "admin"
 
 
@@ -60,6 +64,7 @@ def test_cache_user_from_payload_stores_session(mocker):
         "email": "admin@test.com",
         "full_name": "Admin",
         "company_id": 10,
+        "company_ids": [10, 20],
         "role": "admin",
         "is_superuser": False,
     }
@@ -67,6 +72,7 @@ def test_cache_user_from_payload_stores_session(mocker):
     user = cache_user_from_payload(payload)
 
     assert user.email == "admin@test.com"
+    assert user.company_ids == [10, 20]
     mock_redis.setex.assert_called_once()
 
 

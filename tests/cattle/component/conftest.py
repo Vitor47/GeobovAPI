@@ -25,6 +25,7 @@ def mock_admin_user():
     user = Mock()
     user.id = 1
     user.company_id = 1
+    user.company_ids = [1]
     user.full_name = "Admin User"
     user.email = "admin@test.com"
     user.is_superuser = False

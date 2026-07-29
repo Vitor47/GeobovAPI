@@ -269,13 +269,29 @@ class UserAdmin(ModelView, model=User):
         User.email,
         User.role,
         User.company,
+        User.companies,
         User.is_superuser,
         User.created_at,
     ]
+    column_labels = {
+        User.company: "Default company",
+        User.companies: "Companies",
+    }
     column_searchable_list = [User.full_name, User.email, User.cpf, User.phone]
     column_sortable_list = [User.id, User.email, User.is_superuser]
     column_filters = [BooleanFilter(User.is_superuser)]
-    form_excluded_columns = ["_password_hash"]
+    form_columns = [
+        User.full_name,
+        User.birth_date,
+        User.phone,
+        User.cpf,
+        User.cnpj,
+        User.email,
+        User.role,
+        User.company,
+        User.companies,
+        User.is_superuser,
+    ]
     form_ajax_refs = {
         "role": {
             "fields": ("name",),
@@ -285,14 +301,30 @@ class UserAdmin(ModelView, model=User):
             "fields": ("name",),
             "order_by": "name",
         },
+        "companies": {
+            "fields": ("name",),
+            "order_by": "name",
+        },
     }
-    form_extra_fields = {
-        "password": PasswordField(
+    form_args = {
+        "company": {
+            "label": "Default company",
+            "description": "Used when the client omits X-Company-Id.",
+        },
+        "companies": {
+            "label": "Companies",
+            "description": "Farms this user can access (memberships).",
+        },
+    }
+
+    async def scaffold_form(self, rules=None):
+        form_class = await super().scaffold_form(rules)
+        form_class.password = PasswordField(
             "Password",
             validators=[validators.Optional(), validators.Length(min=8)],
-            description="Required when creating a user. Leave blank to keep current.",
+            description=("Required when creating a user. Leave blank to keep current."),
         )
-    }
+        return form_class
 
     async def on_model_change(self, data, model, is_created, request):
         password = data.pop("password", None)
@@ -300,3 +332,12 @@ class UserAdmin(ModelView, model=User):
             raise ValueError("Password is required when creating a user")
         if password:
             model.set_password(password)
+
+        default_company = data.get("company")
+        memberships = list(data.get("companies") or [])
+
+        if default_company is not None and default_company not in memberships:
+            memberships.append(default_company)
+            data["companies"] = memberships
+        elif default_company is None and memberships:
+            data["company"] = memberships[0]

@@ -8,7 +8,7 @@ class UserCreate(BaseModel):
     )
     company_id: int | None = Field(
         default=None,
-        description="Overwritten with the authenticated user's company on create.",
+        description="Default farm for the new user (also added as membership).",
     )
 
     model_config = ConfigDict(
@@ -58,7 +58,14 @@ class UserLoginResponse(BaseModel):
     id: int | None = None
     email: str | None = None
     full_name: str | None = None
-    company_id: int | None = None
+    company_id: int | None = Field(
+        default=None,
+        description="Default farm used when X-Company-Id is omitted.",
+    )
+    company_ids: list[int] | None = Field(
+        default=None,
+        description="Farms the user belongs to (memberships).",
+    )
     role: str | None = Field(
         default=None, description="Role name (admin, manager, viewer)."
     )
@@ -71,11 +78,12 @@ class UserLoginResponse(BaseModel):
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "token_type": "bearer",
                 "id": 1,
-                "email": "admin@example.com",
-                "full_name": "Super Admin",
-                "company_id": None,
-                "role": "admin",
-                "is_superuser": True,
+                "email": "farmer@example.com",
+                "full_name": "Joao Fazendeiro",
+                "company_id": 1,
+                "company_ids": [1, 2],
+                "role": "manager",
+                "is_superuser": False,
             }
         },
     )

@@ -41,13 +41,29 @@ def resolve_company_id(
             )
         return x_company_id
 
-    if current_user.company_id is None:
-        raise HTTPException(
-            status_code=400,
-            detail="User is not linked to a company",
-        )
+    membership_ids = list(current_user.company_ids or [])
 
-    return current_user.company_id
+    if x_company_id is not None:
+        if x_company_id not in membership_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="User is not a member of the requested company",
+            )
+        return x_company_id
+
+    if (
+        current_user.company_id is not None
+        and current_user.company_id in membership_ids
+    ):
+        return current_user.company_id
+
+    if membership_ids:
+        return membership_ids[0]
+
+    raise HTTPException(
+        status_code=400,
+        detail="User is not linked to a company",
+    )
 
 
 # Plain Depends aliases — use with @cbv controllers

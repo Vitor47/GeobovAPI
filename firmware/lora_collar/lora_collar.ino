@@ -68,7 +68,7 @@ static TinyGPSPlus gps;
 static HardwareSerial SerialGPS(2);
 
 static String g_deviceSerial;
-static uint32_t g_sleepIntervalMs = 30000;
+static uint32_t g_sleepIntervalMs = 300000;
 static uint32_t g_gpsFixTimeoutMs = 45000;
 static int g_gpsPowerPin = DEFAULT_GPS_POWER_PIN;
 static bool g_gpsPowerActiveHigh = true;

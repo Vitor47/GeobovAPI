@@ -126,6 +126,7 @@ class UserController:
             "email": current_user.email,
             "full_name": current_user.full_name,
             "company_id": current_user.company_id,
+            "company_ids": list(current_user.company_ids or []),
             "role": current_user.role,
             "is_superuser": current_user.is_superuser,
         }

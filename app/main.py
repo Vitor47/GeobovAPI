@@ -1,3 +1,4 @@
+from app.adapters.models import Gateway as _Gateway  # noqa: F401
 from app.bootstrap.admin import register_admin
 from app.bootstrap.container import init_container
 from app.bootstrap.docs import register_documentation
@@ -7,6 +8,9 @@ from app.bootstrap.middleware import register_middlewares
 from app.bootstrap.openapi import API_DESCRIPTION, DocumentedFastAPI
 from app.bootstrap.routes import register_routes
 from app.core.config import settings
+
+# Ensure all ORM mappers (incl. Gateway) are registered at startup.
+_ = _Gateway
 
 
 def create_app() -> DocumentedFastAPI:

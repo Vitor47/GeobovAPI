@@ -3,6 +3,7 @@ from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.adapters.models.base import BaseModel
+from app.adapters.models.user_company import user_companies
 
 
 class User(BaseModel):
@@ -21,8 +22,16 @@ class User(BaseModel):
     role_id = Column(Integer, ForeignKey("roles.id"))
     role = relationship("Role", back_populates="users")
 
+    # Default farm used when X-Company-Id is omitted.
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
     company = relationship("Company", back_populates="users")
+
+    # Farm memberships (N:N) — source of truth for access scope.
+    companies = relationship(
+        "Company",
+        secondary=user_companies,
+        back_populates="members",
+    )
 
     def __str__(self) -> str:
         return f"{self.full_name} <{self.email}>"
@@ -35,3 +44,7 @@ class User(BaseModel):
         if password_hash is None:
             return False
         return self.pwd_context.verify(password, str(password_hash))
+
+    @property
+    def company_ids(self) -> list[int]:
+        return [company.id for company in self.companies or []]

@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from redis import Redis
@@ -22,6 +22,7 @@ class CachedUser:
     company_id: int | None
     role: str | None
     is_superuser: bool
+    company_ids: list[int] = field(default_factory=list)
 
 
 def _session_key(user_id: int | str) -> str:
@@ -36,34 +37,47 @@ def _resolve_role_name(role: Any) -> str | None:
     return str(role)
 
 
+def _resolve_company_ids(user: Any) -> list[int]:
+    company_ids = getattr(user, "company_ids", None)
+    if company_ids is None:
+        return []
+    return [int(company_id) for company_id in company_ids]
+
+
 def serialize_user(user: Any) -> dict[str, Any]:
+    company_ids = _resolve_company_ids(user)
     return {
         "id": user.id,
         "email": user.email,
         "full_name": getattr(user, "full_name", ""),
         "company_id": user.company_id,
+        "company_ids": company_ids,
         "role": _resolve_role_name(getattr(user, "role", None)),
         "is_superuser": bool(getattr(user, "is_superuser", False)),
     }
 
 
 def serialize_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    company_ids = payload.get("company_ids") or []
     return {
         "id": int(payload["sub"]),
         "email": payload.get("email"),
         "full_name": payload.get("full_name", ""),
         "company_id": payload.get("company_id"),
+        "company_ids": [int(item) for item in company_ids],
         "role": payload.get("role"),
         "is_superuser": bool(payload.get("is_superuser", False)),
     }
 
 
 def deserialize_user(data: dict[str, Any]) -> CachedUser:
+    company_ids = data.get("company_ids") or []
     return CachedUser(
         id=int(data["id"]),
         email=str(data["email"]),
         full_name=str(data.get("full_name", "")),
         company_id=data.get("company_id"),
+        company_ids=[int(item) for item in company_ids],
         role=data.get("role"),
         is_superuser=bool(data.get("is_superuser", False)),
     )
