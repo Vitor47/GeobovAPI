@@ -32,6 +32,18 @@ def _format_timestamp(value: Any) -> str:
     return str(value) if value is not None else ""
 
 
+def _format_optional_int(value: Any) -> str:
+    if value is None:
+        return "—"
+    return str(int(value))
+
+
+def _format_optional_float(value: Any, digits: int) -> str:
+    if value is None:
+        return "—"
+    return f"{float(value):.{digits}f}"
+
+
 class TelemetryReadAdmin(BaseView):
     """Read-only MongoDB telemetry browser for SQLAdmin."""
 
@@ -124,6 +136,14 @@ class TelemetryReadAdmin(BaseView):
                     ),
                     "lat": float(doc.get("lat") or 0),
                     "lon": float(doc.get("lon") or 0),
+                    "protocol_version": _format_optional_int(
+                        doc.get("protocol_version")
+                    ),
+                    "sequence": _format_optional_int(doc.get("sequence")),
+                    "satellites": _format_optional_int(doc.get("satellites")),
+                    "hdop": _format_optional_float(doc.get("hdop"), 1),
+                    "rssi": _format_optional_int(doc.get("rssi")),
+                    "snr": _format_optional_float(doc.get("snr"), 2),
                     "timestamp": _format_timestamp(doc.get("timestamp")),
                     "sample_count": doc.get("sample_count"),
                 }
@@ -134,7 +154,7 @@ class TelemetryReadAdmin(BaseView):
             "sqladmin/telemetry_list.html",
             context={
                 "title": "Telemetry",
-                "subtitle": "MongoDB GPS samples (read only)",
+                "subtitle": "MongoDB GPS and LoRa RF samples (read only)",
                 "rows": rows,
                 "total": total,
                 "total_pages": total_pages,

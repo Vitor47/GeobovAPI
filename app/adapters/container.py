@@ -153,6 +153,7 @@ class Container(containers.DeclarativeContainer):
     ingest_gateway_telemetry_use_case = providers.Factory(
         IngestGatewayTelemetryUseCase,
         gateway_repository=gateway_repository,
+        cattle_repository=cattle_repository,
         device_repository=device_repository,
         cattle_data_repository=cattle_data_repository,
     )

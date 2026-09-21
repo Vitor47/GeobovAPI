@@ -9,12 +9,5 @@ class ListTelemetryStep(BaseUseCaseStep):
         )
 
         self.use_case.data = [
-            CattleDataResponseDTO(
-                id=record.id,
-                cattle_id=record.cattle_id,
-                lat=record.lat,
-                lon=record.lon,
-                timestamp=record.timestamp,
-            )
-            for record in records
+            CattleDataResponseDTO.from_entity(record) for record in records
         ]

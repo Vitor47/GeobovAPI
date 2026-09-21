@@ -72,3 +72,30 @@ def test_get_active_device_by_serial_and_company(
         company_id=999,
     )
     assert missing is None
+
+
+@pytest.mark.integration
+def test_get_active_device_by_cattle_and_company(
+    db_session, seeded_company, seeded_cattle
+):
+    repository = DeviceRepository(db=db_session)
+    repository.create_device(
+        DeviceCreateDTO(
+            serial_number="LORA-COW",
+            cattle_id=seeded_cattle.id,
+            company_id=seeded_company.id,
+        )
+    )
+
+    found = repository.get_active_device_by_cattle_and_company(
+        cattle_id=seeded_cattle.id,
+        company_id=seeded_company.id,
+    )
+    assert found is not None
+    assert found.cattle_id == seeded_cattle.id
+
+    missing = repository.get_active_device_by_cattle_and_company(
+        cattle_id=seeded_cattle.id,
+        company_id=999,
+    )
+    assert missing is None

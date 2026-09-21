@@ -12,3 +12,9 @@ class CattleData:
     lat: float
     lon: float
     timestamp: datetime
+    protocol_version: int | None = None
+    sequence: int | None = None
+    satellites: int | None = None
+    hdop: float | None = None
+    rssi: int | None = None
+    snr: float | None = None

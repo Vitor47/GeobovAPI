@@ -69,11 +69,28 @@ class DeviceRepositoryAbstract(ABC):
         """
         Retrieve an active collar device by serial number within a company.
 
-        Used by gateway ingest to resolve LoRa identity to cattle.
+        Args:
+            serial_number (str): Physical device serial.
+            company_id (int): Company owning the gateway and device.
+
+        Returns:
+            Optional[Device]: The found record, or None if not found.
+        """
+
+    @abstractmethod
+    def get_active_device_by_cattle_and_company(
+        self,
+        cattle_id: int,
+        company_id: int,
+    ) -> Optional[Device]:
+        """
+        Retrieve an active collar device linked to a cattle within a company.
+
+        Used by gateway ingest to update last_seen when telemetry is
+        associated by cow_id.
 
         Args:
-            db (Session): Active SQLAlchemy database session.
-            serial_number (str): Physical device serial from the LoRa packet.
+            cattle_id (int): Cattle identifier from the LoRa packet (cow_id).
             company_id (int): Company owning the gateway and device.
 
         Returns:

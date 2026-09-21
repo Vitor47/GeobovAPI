@@ -4,27 +4,32 @@ Production sketches for the cattle collar (sender) and farm gateway (receiver).
 
 ## Packet format (LoRa air)
 
-```text
-LORA-A1B2C3D4E5F6|-29.673218|-53.811286|42
-```
+Fixed 17-byte packed binary packet:
 
-Fields: `device_serial|lat|lon|seq` (`seq` optional).
+| Offset | Field | Type | Notes |
+|--------|-------|------|-------|
+| 0 | `protocolVersion` | `uint8` | Currently `1` |
+| 1–2 | `cowId` | `uint16` | Cattle ID (`Cattle.id`) |
+| 3–6 | `latitude` | `int32` | Latitude × 1_000_000 |
+| 7–10 | `longitude` | `int32` | Longitude × 1_000_000 |
+| 11–14 | `sequence` | `uint32` | Transmission sequence |
+| 15 | `satellites` | `uint8` | GPS satellite count |
+| 16 | `hdopX10` | `uint8` | HDOP × 10 |
 
-JSON is only used on Wi-Fi toward the API.
+JSON is only used on Wi-Fi toward the API. The gateway adds SX127x `rssi`
+and `snr` before posting.
 
-## Collar identity (no hardcoded serial)
+## Collar identity
 
-Each ESP32 has a factory MAC in eFuse. The collar builds:
+The collar stores `cow_id` in NVS (uint16). That value is sent in every LoRa
+packet and must match the cattle ID in CowTrack (`Cattle.id`).
 
-```text
-LORA-<12 hex digits from ESP.getEfuseMac()>
-```
-
-That value is stable for the life of the chip. Register the **same** string as
-`Device.serial_number` in CowTrack (admin / API).
+Each ESP32 also has a factory MAC used as hardware serial
+`LORA-<12 hex digits from ESP.getEfuseMac()>`. Register that string as
+`Device.serial_number` if you want last-seen tracking on the collar device.
 
 Optional override: hold **BOOT** at power-on → captive portal `Collar-…` → set
-serial / sleep interval / GPS fix timeout / GPS power GPIO / LoRa MHz (NVS).
+cow ID / sleep interval / GPS fix timeout / GPS power GPIO / LoRa MHz (NVS).
 
 ## Collar power (deep sleep)
 
@@ -61,7 +66,17 @@ POST /api/v1/gateways/ingest
 X-Gateway-Api-Key: <gateway key>
 Content-Type: application/json
 
-{"device_serial":"LORA-A1B2C3D4E5F6","lat":-29.673218,"lon":-53.811286}
+{
+  "protocol_version": 1,
+  "cow_id": 1,
+  "lat": -29.673200,
+  "lon": -53.811300,
+  "sequence": 27,
+  "satellites": 9,
+  "hdop": 1.2,
+  "rssi": -83,
+  "snr": 6.75
+}
 ```
 
 ## Libraries (Arduino IDE / PlatformIO)
@@ -83,9 +98,10 @@ or change `#define LOG_ENABLED 0` to `1` at the top of the sketch.
 
 ## Provisioning checklist
 
-1. Create Company + Cattle in the API/admin.
-2. Flash collar → open portal once (or read MAC-based serial with `LOG_ENABLED=1`).
-3. `POST /api/v1/devices/` with that `serial_number` linked to the cattle.
+1. Create Company + Cattle in the API/admin. Note the cattle ID (`cow_id`).
+2. Flash collar → set `cow_id` in the portal to that cattle ID.
+3. Optionally `POST /api/v1/devices/` with the MAC-based `serial_number`
+   linked to the same cattle (enables collar last-seen).
 4. Create Gateway → copy `api_key` into gateway portal.
 5. Set gateway URL to `/api/v1/gateways/ingest` (not `/devices/ingest`).
 6. Same LoRa frequency and sync word on both boards.

@@ -15,10 +15,4 @@ class CreateTelemetryStep(BaseUseCaseStep):
 
         cattle_data = self.use_case.repository.create_cattle_data(payload)
 
-        self.use_case.data = CattleDataResponseDTO(
-            id=cattle_data.id,
-            cattle_id=cattle_data.cattle_id,
-            lat=cattle_data.lat,
-            lon=cattle_data.lon,
-            timestamp=cattle_data.timestamp,
-        )
+        self.use_case.data = CattleDataResponseDTO.from_entity(cattle_data)

@@ -151,13 +151,17 @@ class GatewayController:
         summary="Ingest telemetry via gateway",
         description=(
             "LoRa gateway endpoint. Authenticates with `X-Gateway-Api-Key`, "
-            "resolves the collar by `device_serial` within the gateway's "
-            "company, and stores GPS telemetry."
+            "resolves cattle by `cow_id` within the gateway's company, and "
+            "stores GPS telemetry plus RF quality (RSSI/SNR)."
         ),
         responses={
             401: {
                 "model": ErrorResponse,
-                "description": "Invalid gateway key or unknown device.",
+                "description": "Invalid gateway key or unknown cattle.",
+            },
+            422: {
+                "model": ErrorResponse,
+                "description": "Invalid telemetry payload.",
             },
         },
     )
@@ -173,9 +177,15 @@ class GatewayController:
         ],
     ):
         payload = GatewayTelemetryIngestDTO(
-            device_serial=data.device_serial,
+            protocol_version=data.protocol_version,
+            cow_id=data.cow_id,
             lat=data.lat,
             lon=data.lon,
+            sequence=data.sequence,
+            satellites=data.satellites,
+            hdop=data.hdop,
+            rssi=data.rssi,
+            snr=data.snr,
         )
 
         use_case = self.ingest_gateway_telemetry_use_case_factory(

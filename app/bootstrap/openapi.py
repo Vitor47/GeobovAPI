@@ -23,10 +23,11 @@ Login with a superuser email/password (same credentials from setup/seed).
 
 ## Gateway telemetry
 
-LoRa collars send GPS over LoRa (device serial + lat/lon). The farm gateway
-forwards samples to `POST /api/v1/gateways/ingest` using `X-Gateway-Api-Key`
-received when the gateway is registered. The API resolves
-gateway → company → device serial → cattle.
+LoRa collars send a 17-byte binary packet (`cow_id` + GPS + sequence).
+The farm gateway decodes it, adds SX127x RSSI/SNR, and forwards JSON to
+`POST /api/v1/gateways/ingest` using `X-Gateway-Api-Key` received when
+the gateway is registered. The API resolves gateway → company → `cow_id`
+(Cattle.id) and stores telemetry.
 """
 
 TAGS_METADATA = [
@@ -40,7 +41,10 @@ TAGS_METADATA = [
     },
     {
         "name": "Telemetry",
-        "description": "Cattle GPS telemetry records (latitude, longitude, timestamp).",
+        "description": (
+            "Cattle GPS telemetry records (latitude, longitude, timestamp, "
+            "and optional LoRa RF quality fields)."
+        ),
     },
     {
         "name": "Devices",

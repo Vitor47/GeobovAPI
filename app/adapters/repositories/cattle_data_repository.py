@@ -31,6 +31,19 @@ class CattleDataRepository(CattleDataRepositoryAbstract):
             "lon": data.lon,
             "timestamp": timestamp,
         }
+        optional_fields = (
+            "protocol_version",
+            "sequence",
+            "satellites",
+            "hdop",
+            "rssi",
+            "snr",
+        )
+        for field_name in optional_fields:
+            value = getattr(data, field_name, None)
+            if value is not None:
+                document[field_name] = value
+
         result = self.raw.insert_one(document)
         return CattleData(
             id=str(result.inserted_id),
@@ -39,6 +52,12 @@ class CattleDataRepository(CattleDataRepositoryAbstract):
             lat=data.lat,
             lon=data.lon,
             timestamp=timestamp,
+            protocol_version=document.get("protocol_version"),
+            sequence=document.get("sequence"),
+            satellites=document.get("satellites"),
+            hdop=document.get("hdop"),
+            rssi=document.get("rssi"),
+            snr=document.get("snr"),
         )
 
     def get_cattle_data_by_id_and_company_id(
@@ -177,4 +196,10 @@ class CattleDataRepository(CattleDataRepositoryAbstract):
             lat=float(document["lat"]),
             lon=float(document["lon"]),
             timestamp=document["timestamp"],
+            protocol_version=document.get("protocol_version"),
+            sequence=document.get("sequence"),
+            satellites=document.get("satellites"),
+            hdop=document.get("hdop"),
+            rssi=document.get("rssi"),
+            snr=document.get("snr"),
         )

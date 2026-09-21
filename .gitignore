@@ -140,6 +140,11 @@ ENV/
 env.bak/
 venv.bak/
 
+# AWS TCC deploy secrets / local state
+deploy/aws/.env
+deploy/aws/*.pem
+deploy/aws/.provision-state.env
+
 # Spyder project settings
 .spyderproject
 .spyproject

@@ -5,7 +5,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class DeviceCreate(BaseModel):
     serial_number: str = Field(
-        description="Unique LoRa collar serial (sent in LoRa packets)."
+        description=(
+            "Unique LoRa collar serial " "(hardware ID, optional last-seen tracking)."
+        )
     )
     cattle_id: int = Field(description="Cattle to link (one device per cattle).")
     name: str | None = Field(default=None, description="Optional friendly device name.")

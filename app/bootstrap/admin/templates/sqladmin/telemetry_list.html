@@ -47,8 +47,14 @@
             <th>Source</th>
             <th>Company</th>
             <th>Cattle</th>
+            <th>Protocol</th>
             <th>Lat</th>
             <th>Lon</th>
+            <th>Seq</th>
+            <th>Sats</th>
+            <th>HDOP</th>
+            <th>RSSI</th>
+            <th>SNR</th>
             <th>Timestamp (UTC)</th>
             <th>Samples</th>
           </tr>
@@ -66,14 +72,20 @@
             </td>
             <td>{{ row.company_label }}</td>
             <td>{{ row.cattle_label }}</td>
+            <td>{{ row.protocol_version }}</td>
             <td>{{ '%.6f'|format(row.lat) }}</td>
             <td>{{ '%.6f'|format(row.lon) }}</td>
+            <td>{{ row.sequence }}</td>
+            <td>{{ row.satellites }}</td>
+            <td>{{ row.hdop }}</td>
+            <td>{{ row.rssi }}</td>
+            <td>{{ row.snr }}</td>
             <td>{{ row.timestamp }}</td>
             <td>{{ row.sample_count or '—' }}</td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="8" class="text-secondary text-center py-4">No telemetry found for these filters.</td>
+            <td colspan="14" class="text-secondary text-center py-4">No telemetry found for these filters.</td>
           </tr>
           {% endfor %}
         </tbody>

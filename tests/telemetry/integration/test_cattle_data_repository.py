@@ -28,6 +28,37 @@ def test_create_cattle_data_persists_record_when_payload_is_valid(mongo_db):
     stored = mongo_db["cattle_telemetry"].find_one({"_id": ObjectId(result.id)})
     assert stored is not None
     assert stored["lat"] == -23.55
+    assert "sequence" not in stored
+
+
+@pytest.mark.integration
+def test_create_cattle_data_persists_lora_fields_when_provided(mongo_db):
+    repository = CattleDataRepository(db=mongo_db)
+    payload = CattleDataCreateDTO(
+        cattle_id=1,
+        lat=-29.6732,
+        lon=-53.8113,
+        company_id=10,
+        protocol_version=1,
+        sequence=27,
+        satellites=9,
+        hdop=1.2,
+        rssi=-83,
+        snr=6.75,
+    )
+
+    result = repository.create_cattle_data(payload)
+
+    assert result.protocol_version == 1
+    assert result.sequence == 27
+    assert result.satellites == 9
+    assert result.hdop == 1.2
+    assert result.rssi == -83
+    assert result.snr == 6.75
+
+    stored = mongo_db["cattle_telemetry"].find_one({"_id": ObjectId(result.id)})
+    assert stored["sequence"] == 27
+    assert stored["rssi"] == -83
 
 
 @pytest.mark.integration

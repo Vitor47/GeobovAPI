@@ -82,6 +82,21 @@ class DeviceRepository(DeviceRepositoryAbstract):
             .first()
         )
 
+    def get_active_device_by_cattle_and_company(
+        self,
+        cattle_id: int,
+        company_id: int,
+    ) -> Optional[Device]:
+        return (
+            self.db.query(Device)
+            .filter(
+                Device.cattle_id == cattle_id,
+                Device.company_id == company_id,
+                Device.is_active.is_(True),
+            )
+            .first()
+        )
+
     def update_last_seen(self, device_id: int) -> None:
         stmt = (
             update(Device)

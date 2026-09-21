@@ -412,7 +412,7 @@ Endpoint → UseCase.run() → Step._run() → Repository → ORM
 | `POST` | `/api/v1/gateways/` | Bearer | Register LoRa gateway (returns `api_key`) |
 | `GET` | `/api/v1/gateways/` | Bearer | List gateways |
 | `GET` | `/api/v1/gateways/{id}` | Bearer | Get gateway |
-| `POST` | `/api/v1/gateways/ingest` | `X-Gateway-Api-Key` | Ingest GPS via gateway + device serial |
+| `POST` | `/api/v1/gateways/ingest` | `X-Gateway-Api-Key` | Ingest GPS via gateway + `cow_id` |
 | `GET` | `/health` | Public | DB + Redis health check |
 
 ### Interactive documentation

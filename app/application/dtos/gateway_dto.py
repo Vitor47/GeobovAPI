@@ -35,25 +35,54 @@ class GatewayResponseDTO:
 
 
 class GatewayTelemetryIngestDTO:
-    def __init__(self, device_serial: str, lat: float, lon: float):
-        self.device_serial = device_serial
+    def __init__(
+        self,
+        protocol_version: int,
+        cow_id: int,
+        lat: float,
+        lon: float,
+        sequence: int,
+        satellites: int,
+        hdop: float,
+        rssi: int,
+        snr: float,
+    ):
+        self.protocol_version = protocol_version
+        self.cow_id = cow_id
         self.lat = lat
         self.lon = lon
+        self.sequence = sequence
+        self.satellites = satellites
+        self.hdop = hdop
+        self.rssi = rssi
+        self.snr = snr
 
 
 class GatewayTelemetryResponseDTO:
     def __init__(
         self,
         gateway_id: int,
-        device_id: int,
         cattle_id: int,
         cattle_data_id: str,
+        protocol_version: int,
         lat: float,
         lon: float,
+        sequence: int,
+        satellites: int,
+        hdop: float,
+        rssi: int,
+        snr: float,
+        device_id: int | None = None,
     ):
         self.gateway_id = gateway_id
         self.device_id = device_id
         self.cattle_id = cattle_id
         self.cattle_data_id = cattle_data_id
+        self.protocol_version = protocol_version
         self.lat = lat
         self.lon = lon
+        self.sequence = sequence
+        self.satellites = satellites
+        self.hdop = hdop
+        self.rssi = rssi
+        self.snr = snr

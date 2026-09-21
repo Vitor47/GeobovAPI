@@ -1,6 +1,7 @@
 .PHONY: help install install-dev run test test-unit test-integration test-component \
         setup seed lint format clean docker-up docker-dev docker-down docker-logs \
-        docker-ps docker-setup docker-seed docker-down-v pre-commit-install
+        docker-ps docker-setup docker-seed docker-down-v pre-commit-install \
+        aws-provision aws-validate
 
 PYTHON ?= $(shell test -x venv/bin/python && echo ./venv/bin/python || echo python3)
 PIP ?= $(shell test -x venv/bin/pip && echo ./venv/bin/pip || echo pip3)
@@ -120,3 +121,9 @@ clean: ## Remove __pycache__ and .pyc files
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
 	find . -type f -name "*.pyo" -delete 2>/dev/null || true
 	@echo "Cleanup completed!"
+
+aws-provision: ## Provision TCC EC2 + DNS (requires AWS CLI credentials)
+	bash deploy/aws/provision.sh
+
+aws-validate: ## Hit /health on the deployed domain
+	bash deploy/aws/validate.sh
