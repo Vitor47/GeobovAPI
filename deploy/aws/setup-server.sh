@@ -17,7 +17,29 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y ca-certificates curl gnupg nginx awscli
+apt-get install -y ca-certificates curl gnupg nginx unzip
+
+install_aws_cli() {
+  if command -v aws >/dev/null 2>&1; then
+    return 0
+  fi
+  local arch pkg
+  case "$(uname -m)" in
+    aarch64|arm64) arch="aarch64" ;;
+    x86_64|amd64) arch="x86_64" ;;
+    *)
+      echo "No AWS CLI build for $(uname -m). Keeping the env file on disk."
+      return 0
+      ;;
+  esac
+  pkg="$(mktemp -d)"
+  curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${arch}.zip" -o "${pkg}/awscliv2.zip"
+  unzip -q "${pkg}/awscliv2.zip" -d "${pkg}"
+  "${pkg}/aws/install" --update
+  rm -rf "${pkg}"
+}
+
+install_aws_cli
 
 refresh_env_from_ssm() {
   if ! command -v aws >/dev/null 2>&1; then
