@@ -55,7 +55,7 @@ Hold **BOOT** at reset (or first boot) → portal `Gateway-Config`:
 
 | Field | Example |
 |-------|---------|
-| API ingest URL | `http://<host>:8000/api/v1/gateways/ingest` |
+| API ingest URL | `https://54.94.137.227/api/v1/gateways/ingest` |
 | X-Gateway-Api-Key | key returned when creating the Gateway |
 | LoRa MHz | `915` or `868` (must match collar) |
 

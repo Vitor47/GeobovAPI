@@ -22,7 +22,7 @@
  *
  * E envia para:
  *
- *   POST /api/v1/gateways/ingest
+ *   https://54.94.137.227/api/v1/gateways/ingest
  *
  * Header:
  *
@@ -125,6 +125,19 @@ static constexpr size_t LORA_PACKET_SIZE = 17;
 // Frequência padrão
 static constexpr uint32_t DEFAULT_LORA_MHZ = 915;
 
+// Production ingest endpoint. A saved LAN address is replaced on boot.
+static const char DEFAULT_API_URL[] =
+    "https://54.94.137.227/api/v1/gateways/ingest";
+static const char LEGACY_LAN_API_URL[] =
+    "http://192.168.0.44:8000/api/v1/gateways/ingest";
+
+static String resolveApiUrl(const String& saved) {
+  if (saved.length() == 0 || saved == LEGACY_LAN_API_URL) {
+    return String(DEFAULT_API_URL);
+  }
+  return saved;
+}
+
 // ===========================================================================
 // GLOBALS
 // ===========================================================================
@@ -213,10 +226,10 @@ static void loadSettings() {
       true
   );
 
-  g_apiUrl =
+  const String savedUrl =
       prefs.getString(
           "api_url",
-          "http://192.168.0.44:8000/api/v1/gateways/ingest"
+          DEFAULT_API_URL
       );
 
   g_gatewayApiKey =
@@ -232,6 +245,20 @@ static void loadSettings() {
       );
 
   prefs.end();
+
+  g_apiUrl = resolveApiUrl(savedUrl);
+
+  if (g_apiUrl != savedUrl) {
+    prefs.begin(
+        "gateway",
+        false
+    );
+    prefs.putString(
+        "api_url",
+        g_apiUrl
+    );
+    prefs.end();
+  }
 
   // -------------------------------------------------------------------------
   // Validate frequency
@@ -346,9 +373,11 @@ static bool runConfigPortal(
   );
 
   String savedUrl =
-      prefs.getString(
-          "api_url",
-          "http://192.168.0.44:8000/api/v1/gateways/ingest"
+      resolveApiUrl(
+          prefs.getString(
+              "api_url",
+              DEFAULT_API_URL
+          )
       );
 
   String savedKey =
