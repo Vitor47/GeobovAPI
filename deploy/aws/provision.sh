@@ -261,6 +261,31 @@ aws iam put-role-policy \
   --policy-name geobov-ssm-read \
   --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"ssm:GetParameter\",\"ssm:GetParameters\"],\"Resource\":\"arn:aws:ssm:${AWS_REGION}:${ACCOUNT_ID}:parameter/geobov/prod/env\"},{\"Effect\":\"Allow\",\"Action\":\"kms:Decrypt\",\"Resource\":\"*\",\"Condition\":{\"StringEquals\":{\"kms:ViaService\":\"ssm.${AWS_REGION}.amazonaws.com\"}}}]}" \
   || echo "Could not attach the SSM read policy."
+aws iam attach-role-policy \
+  --role-name "${ROLE_NAME}" \
+  --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore \
+  || echo "Could not attach Systems Manager core."
+DEPLOY_BUCKET="geobov-deploy-${ACCOUNT_ID}"
+aws iam put-role-policy \
+  --role-name "${ROLE_NAME}" \
+  --policy-name geobov-deploy-artifact \
+  --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::${DEPLOY_BUCKET}/release.tar.gz\"}]}" \
+  || echo "Could not attach the release download policy."
+if ! aws s3api head-bucket --bucket "${DEPLOY_BUCKET}" >/dev/null 2>&1; then
+  aws s3api create-bucket \
+    --bucket "${DEPLOY_BUCKET}" \
+    --create-bucket-configuration "LocationConstraint=${AWS_REGION}" \
+    || echo "Could not create ${DEPLOY_BUCKET}."
+fi
+aws s3api put-public-access-block --bucket "${DEPLOY_BUCKET}" \
+  --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true \
+  || true
+aws s3api put-bucket-encryption --bucket "${DEPLOY_BUCKET}" \
+  --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"},"BucketKeyEnabled":true}]}' \
+  || true
+aws s3api put-bucket-lifecycle-configuration --bucket "${DEPLOY_BUCKET}" \
+  --lifecycle-configuration '{"Rules":[{"ID":"expire-release","Status":"Enabled","Filter":{"Prefix":"release.tar.gz"},"Expiration":{"Days":1}}]}' \
+  || true
 if ! aws iam get-instance-profile --instance-profile-name "${ROLE_NAME}" >/dev/null 2>&1; then
   aws iam create-instance-profile --instance-profile-name "${ROLE_NAME}" >/dev/null \
     || echo "Could not create the instance profile."
@@ -396,9 +421,8 @@ echo "GeoBov provision complete"
 echo "  Instance:  ${INSTANCE_ID}"
 echo "  Public IP: ${PUBLIC_IP}"
 echo "  Domain:    ${DOMAIN:-<none, use the public IP>}"
-echo "  SSH:       ssh -i ${KEY_FILE} ubuntu@${PUBLIC_IP}"
+echo "  SSH:       ssh -i ${KEY_FILE} ubuntu@${PUBLIC_IP}  (this computer only)"
 echo "  Health:    ${HEALTH_URL}"
 echo "  State:     ${STATE_FILE}"
-echo "  GitHub:    secret GEBOV_SSH_HOST=${PUBLIC_IP}"
-echo "             secret GEBOV_SSH_KEY = contents of ${KEY_FILE}"
+echo "  GitHub:    deploy uses the repository role, not an SSH key"
 echo "============================================"

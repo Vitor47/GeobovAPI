@@ -43,6 +43,12 @@ if [[ -n "${SECURITY_GROUP_ID:-}" && "${SECURITY_GROUP_ID}" != "None" ]]; then
   aws ec2 delete-security-group --group-id "${SECURITY_GROUP_ID}" || true
 fi
 
+DEPLOY_BUCKET="geobov-deploy-${ACCOUNT_ID:-}"
+if [[ -n "${ACCOUNT_ID:-}" ]]; then
+  echo "==> Removing deploy artifact bucket ${DEPLOY_BUCKET}"
+  aws s3 rb "s3://${DEPLOY_BUCKET}" --force || true
+fi
+
 if [[ -n "${KEY_NAME:-}" ]]; then
   echo "==> Deleting key pair ${KEY_NAME} from AWS (local .pem is kept)"
   aws ec2 delete-key-pair --key-name "${KEY_NAME}" || true

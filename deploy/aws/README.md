@@ -77,24 +77,18 @@ bash deploy/aws/validate.sh
 
 Open `https://<public-ip>/health`. Port 80 only answers the certificate challenge and redirects everything else to HTTPS.
 
-## GitHub Actions secrets
+## GitHub deploy
 
-Repository → **Settings** → **Secrets and variables** → **Actions**:
+GitHub does not receive the SSH key and does not open port 22. The repository assumes the role `geobov-github-deploy`, uploads one encrypted artifact, and asks the server to apply it. The command that runs on the server is stored in AWS (`GeoBovDeploy`). Changing the workflow cannot turn that command into a shell of your choice.
 
-| Secret | Value |
-|--------|--------|
-| `GEBOV_SSH_HOST` | Public IP printed by `provision.sh` |
-| `GEBOV_SSH_KEY` | Full contents of `deploy/aws/geobov.pem`, including the BEGIN and END lines |
-| `GEBOV_SSH_USER` | Optional. Default is `ubuntu` |
-
-Then:
+Port 22 stays limited to your home IP, for the admin tunnel. The `.pem` stays on your computer. If `GEBOV_SSH_KEY` was added as a GitHub secret, delete it.
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
-Or run **GeoBov deploy** manually and tick the boxes you want.
+Or run **GeoBov deploy** manually and tick the boxes you want. Re-running the old `v1.0.0` job still uses the workflow from that tag.
 
 GitHub-hosted minutes are free on public repositories. Private repositories include 2,000 minutes per month.
 

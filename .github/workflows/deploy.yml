@@ -1,6 +1,7 @@
 # GeoBov deploy.
-# - Pushing a tag v* updates the API and runs migrations.
-# - Actions → GeoBov deploy → Run workflow lets you pick services and migrations.
+# A tag v* or Actions → Run workflow asks the server to update itself.
+# GitHub never opens SSH. The server downloads one private artifact and runs
+# the deploy command stored in AWS.
 
 name: GeoBov deploy
 
@@ -37,17 +38,13 @@ concurrency:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   deploy:
     name: Deploy GeoBov
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      APP_DIR: /opt/geobov
-      DEPLOY_HOST: ${{ secrets.GEBOV_SSH_HOST }}
-      DEPLOY_USER: ${{ secrets.GEBOV_SSH_USER }}
-      DEPLOY_KEY: ${{ secrets.GEBOV_SSH_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -74,7 +71,6 @@ jobs:
       - name: Require at least one action
         run: |
           set -euo pipefail
-          selected=0
           for flag in \
             "${{ steps.options.outputs.update_api }}" \
             "${{ steps.options.outputs.update_postgres }}" \
@@ -82,25 +78,56 @@ jobs:
             "${{ steps.options.outputs.update_mongo }}" \
             "${{ steps.options.outputs.run_migrations }}"
           do
-            if [[ "$flag" == "true" ]]; then
-              selected=1
-            fi
+            case "$flag" in
+              true|false) ;;
+              *)
+                echo "Unexpected flag value."
+                exit 1
+                ;;
+            esac
           done
-          if [[ "$selected" -eq 0 ]]; then
+          if [[ \
+            "${{ steps.options.outputs.update_api }}" != "true" && \
+            "${{ steps.options.outputs.update_postgres }}" != "true" && \
+            "${{ steps.options.outputs.update_redis }}" != "true" && \
+            "${{ steps.options.outputs.update_mongo }}" != "true" && \
+            "${{ steps.options.outputs.run_migrations }}" != "true" \
+          ]]; then
             echo "Choose at least one option: a service to update, or migrations."
             exit 1
           fi
 
-      - name: Check deploy secrets
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::473841056634:role/geobov-github-deploy
+          aws-region: sa-east-1
+
+      - name: Upload the release artifact
         run: |
           set -euo pipefail
-          if [[ -z "${DEPLOY_HOST}" || -z "${DEPLOY_KEY}" ]]; then
-            echo "Missing GitHub Actions secrets GEBOV_SSH_HOST and GEBOV_SSH_KEY."
-            echo "Create the server once with deploy/aws/provision.sh, then add those secrets."
+          tar -czf "${RUNNER_TEMP}/release.tar.gz" \
+            --exclude '.git' \
+            --exclude '.venv' \
+            --exclude 'venv' \
+            --exclude '__pycache__' \
+            --exclude '.mypy_cache' \
+            --exclude '.pytest_cache' \
+            --exclude '.env' \
+            --exclude '*/.env' \
+            --exclude 'deploy/aws/*.pem' \
+            --exclude 'deploy/aws/.provision-state.env' \
+            -C "${GITHUB_WORKSPACE}" .
+          if tar -tzf "${RUNNER_TEMP}/release.tar.gz" | grep -E '(^|/)(\.env|[^/]+\.pem)$'; then
+            echo "Refusing to upload a secret file."
             exit 1
           fi
+          aws s3 cp "${RUNNER_TEMP}/release.tar.gz" \
+            "s3://geobov-deploy-473841056634/release.tar.gz" \
+            --sse AES256 \
+            --only-show-errors
 
-      - name: Upload code and update the server
+      - name: Ask the server to update
         env:
           UPDATE_API: ${{ steps.options.outputs.update_api }}
           UPDATE_POSTGRES: ${{ steps.options.outputs.update_postgres }}
@@ -109,30 +136,44 @@ jobs:
           RUN_MIGRATIONS: ${{ steps.options.outputs.run_migrations }}
         run: |
           set -euo pipefail
-          umask 077
-          mkdir -p "${HOME}/.ssh"
-          printf '%s\n' "$DEPLOY_KEY" > "${HOME}/.ssh/geobov.pem"
-          chmod 400 "${HOME}/.ssh/geobov.pem"
-          SSH_USER="${DEPLOY_USER:-ubuntu}"
-          SSH_OPTS="-i ${HOME}/.ssh/geobov.pem -o StrictHostKeyChecking=accept-new"
-          rsync -az --delete \
-            --exclude '.git' \
-            --exclude 'venv' \
-            --exclude '.venv' \
-            --exclude '__pycache__' \
-            --exclude '.mypy_cache' \
-            --exclude '.pytest_cache' \
-            --exclude '.env' \
-            --exclude 'deploy/aws/.env' \
-            --exclude 'deploy/aws/*.pem' \
-            --exclude 'deploy/aws/.provision-state.env' \
-            -e "ssh ${SSH_OPTS}" \
-            ./ "${SSH_USER}@${DEPLOY_HOST}:${APP_DIR}/"
-          args=()
-          [[ "$UPDATE_API" == "true" ]] && args+=(--api)
-          [[ "$UPDATE_POSTGRES" == "true" ]] && args+=(--postgres)
-          [[ "$UPDATE_REDIS" == "true" ]] && args+=(--redis)
-          [[ "$UPDATE_MONGO" == "true" ]] && args+=(--mongo)
-          [[ "$RUN_MIGRATIONS" == "true" ]] && args+=(--migrate)
-          ssh ${SSH_OPTS} "${SSH_USER}@${DEPLOY_HOST}" \
-            "sudo bash ${APP_DIR}/deploy/aws/update.sh ${args[*]}"
+          PARAMS="$(mktemp)"
+          export PARAMS
+          python3 -c 'import json,os,pathlib; pathlib.Path(os.environ["PARAMS"]).write_text(json.dumps({key:[os.environ[name]] for key,name in {"updateApi":"UPDATE_API","updatePostgres":"UPDATE_POSTGRES","updateRedis":"UPDATE_REDIS","updateMongo":"UPDATE_MONGO","runMigrations":"RUN_MIGRATIONS"}.items()}))'
+          CMD="$(aws ssm send-command \
+            --document-name GeoBovDeploy \
+            --targets Key=tag:Project,Values=GeoBov \
+            --parameters "file://${PARAMS}" \
+            --comment "geobov ${GITHUB_SHA}" \
+            --timeout-seconds 1500 \
+            --query Command.CommandId \
+            --output text)"
+          echo "Command ${CMD}"
+          IID=""
+          STATUS="Pending"
+          for _ in $(seq 1 150); do
+            IID="$(aws ssm list-command-invocations \
+              --command-id "${CMD}" \
+              --query 'CommandInvocations[0].InstanceId' \
+              --output text 2>/dev/null || true)"
+            if [[ -n "${IID}" && "${IID}" != "None" ]]; then
+              STATUS="$(aws ssm get-command-invocation \
+                --command-id "${CMD}" \
+                --instance-id "${IID}" \
+                --query Status \
+                --output text)"
+            fi
+            case "${STATUS}" in
+              Success|Failed|Cancelled|TimedOut|Cancelling) break ;;
+            esac
+            sleep 10
+          done
+          if [[ -z "${IID}" || "${IID}" == "None" ]]; then
+            echo "The server did not pick up the command."
+            exit 1
+          fi
+          aws ssm get-command-invocation \
+            --command-id "${CMD}" \
+            --instance-id "${IID}" \
+            --query '{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent}' \
+            --output json
+          [[ "${STATUS}" == "Success" ]]
