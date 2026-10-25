@@ -1,5 +1,9 @@
 from app.core.cache_utils.user_cache import cache_user_from_payload
-from app.core.security import build_token_payload, create_access_token
+from app.core.security import (
+    build_token_payload,
+    create_access_token,
+    decode_access_token,
+)
 from app.domain.steps.base_use_case_step import BaseUseCaseStep
 from app.domain.use_cases.exceptions import StopUseCaseException
 
@@ -23,8 +27,11 @@ class AuthenticateUserStep(BaseUseCaseStep):
         payload["company_id"] = active_company_id
         payload["company_ids"] = company_ids
 
-        cache_user_from_payload(payload)
         token = create_access_token(payload)
+        issued = decode_access_token(token)
+        if issued is None:
+            raise StopUseCaseException("Could not issue access token")
+        cache_user_from_payload(issued)
 
         self.use_case.data = {
             "access_token": token,

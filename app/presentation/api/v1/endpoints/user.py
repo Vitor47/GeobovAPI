@@ -1,5 +1,5 @@
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi_utils.cbv import cbv
 
 from app.adapters.container import Container
@@ -8,9 +8,16 @@ from app.core.auth.deps import CanCreateUserDep, CompanyIdDep, CurrentUserDep
 from app.core.cache_utils.user_cache import (
     CachedUser,
     cache_user_from_payload,
-    invalidate_user_session,
+    revoke_token,
 )
-from app.core.security import create_access_token
+from app.core.config import settings
+from app.core.rate_limit import (
+    clear_attempts,
+    client_ip,
+    is_attempt_limited,
+    register_attempt,
+)
+from app.core.security import create_access_token, decode_access_token
 from app.domain.use_cases.exceptions import StopUseCaseException
 from app.presentation.api.v1.schemas.common import ErrorResponse, MessageResponse
 from app.presentation.api.v1.schemas.user import (
@@ -85,12 +92,19 @@ class UserController:
         ),
         responses={
             401: {"model": ErrorResponse, "description": "Invalid credentials."},
+            429: {"model": ErrorResponse, "description": "Too many login attempts."},
         },
     )
     def login(
         self,
         data: UserLogin,
+        request: Request,
     ):
+        peer = request.client.host if request.client else None
+        bucket = f"login:{client_ip(request.headers.get('x-real-ip'), peer)}"
+        if is_attempt_limited(bucket, settings.LOGIN_MAX_ATTEMPTS):
+            raise HTTPException(status_code=429, detail="Too many login attempts")
+
         payload = UserLoginDTO(email=data.email, password=data.password)
 
         use_case = self.authenticate_user_use_case_factory(
@@ -101,11 +115,16 @@ class UserController:
         try:
             use_case.run()
         except StopUseCaseException as error:
-            raise HTTPException(status_code=400, detail=str(error)) from error
+            register_attempt(bucket, settings.LOGIN_ATTEMPT_WINDOW_SECONDS)
+            raise HTTPException(
+                status_code=401, detail="Invalid credentials"
+            ) from error
 
         if not use_case.data:
+            register_attempt(bucket, settings.LOGIN_ATTEMPT_WINDOW_SECONDS)
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
+        clear_attempts(bucket)
         return use_case.data
 
     @router.post(
@@ -156,8 +175,14 @@ class UserController:
             "role": current_user.role,
             "is_superuser": current_user.is_superuser,
         }
+        if current_user.jti:
+            revoke_token(current_user.id, current_user.jti)
+
         token = create_access_token(payload)
-        cache_user_from_payload(payload)
+        issued = decode_access_token(token)
+        if issued is None:
+            raise HTTPException(status_code=500, detail="Could not issue access token")
+        cache_user_from_payload(issued)
 
         return {
             "access_token": token,
@@ -175,13 +200,16 @@ class UserController:
         "/logout",
         response_model=MessageResponse,
         summary="Logout",
-        description="Invalidates the current user's Redis session cache.",
+        description=(
+            "Revokes the current JWT. The token id stays blocked until it "
+            "expires and is not counted as a login attempt."
+        ),
         responses={
             401: {"model": ErrorResponse, "description": "Missing or invalid JWT."},
         },
     )
     def logout(self, current_user: CachedUser = CurrentUserDep):
-        invalidate_user_session(current_user.id)
+        revoke_token(current_user.id, current_user.jti)
         return {"detail": "Logged out successfully"}
 
     @router.get(

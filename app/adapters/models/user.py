@@ -1,4 +1,4 @@
-from passlib.context import CryptContext
+import bcrypt
 from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
@@ -7,7 +7,6 @@ from app.adapters.models.user_company import user_companies
 
 
 class User(BaseModel):
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     __tablename__ = "users"
 
     full_name = Column(String, nullable=False)
@@ -37,13 +36,20 @@ class User(BaseModel):
         return f"{self.full_name} <{self.email}>"
 
     def set_password(self, password: str) -> None:
-        object.__setattr__(self, "_password_hash", self.pwd_context.hash(password))
+        hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+        object.__setattr__(self, "_password_hash", hashed.decode("utf-8"))
 
     def authenticate(self, password: str) -> bool:
         password_hash = getattr(self, "_password_hash", None)
         if password_hash is None:
             return False
-        return self.pwd_context.verify(password, str(password_hash))
+        try:
+            return bcrypt.checkpw(
+                password.encode("utf-8"),
+                str(password_hash).encode("utf-8"),
+            )
+        except ValueError:
+            return False
 
     @property
     def company_ids(self) -> list[int]:

@@ -11,5 +11,5 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 apt-get update -y
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin nginx
 usermod -aG docker ubuntu
-mkdir -p /opt/cowtrack
-chown ubuntu:ubuntu /opt/cowtrack
+mkdir -p /opt/geobov
+chown ubuntu:ubuntu /opt/geobov

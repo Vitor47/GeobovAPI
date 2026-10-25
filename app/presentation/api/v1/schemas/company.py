@@ -1,6 +1,31 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.presentation.api.v1.schemas.user import UserResponse
+
+
+class CompanyListQuery(BaseModel):
+    """Query string for GET /companies."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    q: str | None = Field(
+        default=None,
+        max_length=80,
+        pattern=r"^[0-9A-Za-zÀ-ÿ]+(?:[ '\-][0-9A-Za-zÀ-ÿ]+)*$",
+        description=(
+            "Farm name filter. Letters, numbers, spaces, apostrophes and hyphens."
+        ),
+        examples=["Fazenda São João"],
+    )
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)
+
+    @field_validator("q", mode="before")
+    @classmethod
+    def blank_query_is_none(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
 
 class CompanyCreate(BaseModel):

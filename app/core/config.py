@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     SUPERUSER_PASSWORD: str
     SUPERUSER_FULL_NAME: str
 
+    LOGIN_MAX_ATTEMPTS: int = 10
+    LOGIN_ATTEMPT_WINDOW_SECONDS: int = 900
+    INGEST_MAX_REQUESTS: int = 120
+    INGEST_WINDOW_SECONDS: int = 60
+
     @property
     def is_docs_enabled(self) -> bool:
         if self.DOCS_ENABLED is not None:

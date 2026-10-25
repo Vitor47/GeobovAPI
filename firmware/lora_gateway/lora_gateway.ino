@@ -67,7 +67,9 @@
 #include <LoRa.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <WiFiManager.h>
+#include "isrg_root_x1.h"
 
 // ===========================================================================
 // HARDWARE - LORA
@@ -968,16 +970,21 @@ static bool postTelemetry(
   // -------------------------------------------------------------------------
 
   HTTPClient http;
+  WiFiClientSecure secureClient;
 
   http.setTimeout(
       8000
   );
 
-  if (
-      !http.begin(
-          g_apiUrl
-      )
-  ) {
+  bool began = false;
+  if (g_apiUrl.startsWith("https://")) {
+    secureClient.setCACert(ISRG_ROOT_X1);
+    began = http.begin(secureClient, g_apiUrl);
+  } else {
+    began = http.begin(g_apiUrl);
+  }
+
+  if (!began) {
 
     LOGF(
         "ERROR: HTTP begin failed\n"

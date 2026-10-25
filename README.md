@@ -17,6 +17,7 @@ API for cattle tracking built with **FastAPI**, **Clean Architecture**, **JWT au
 - [Makefile](#makefile)
 - [Tests](#tests)
 - [Pre-commit](#pre-commit)
+- [CI and deploy](#ci-and-deploy)
 - [Project Structure](#project-structure)
 - [API Overview](#api-overview)
 - [Authentication & Permissions](#authentication--permissions)
@@ -28,7 +29,8 @@ API for cattle tracking built with **FastAPI**, **Clean Architecture**, **JWT au
 
 | Layer | Technology | Version |
 |-------|------------|---------|
-| Language | Python | 3.12+ |
+| Language | Python | 3.14 |
+| Packages | uv | lockfile `uv.lock` |
 | API Framework | FastAPI | 0.132.0 |
 | ASGI Server | Uvicorn | 0.41.0 |
 | ORM | SQLAlchemy | 2.0.46 |
@@ -38,7 +40,7 @@ API for cattle tracking built with **FastAPI**, **Clean Architecture**, **JWT au
 | Cache / Session | Redis | 7 |
 | Auth | PyJWT | 2.13.0 |
 | DI | dependency-injector | 4.48.3 |
-| CLI | Click | 8.3.1 |
+| CLI | Click | 8.5.0 |
 | API Docs | Scalar (scalar-fastapi) | 1.8.2 |
 | Testing | pytest | 8.3.4 |
 
@@ -46,7 +48,8 @@ API for cattle tracking built with **FastAPI**, **Clean Architecture**, **JWT au
 
 ## Requirements
 
-- **Python** 3.12 or higher
+- **Python** 3.14
+- **uv** (https://docs.astral.sh/uv/)
 - **PostgreSQL** 15
 - **Redis** 7
 - **Git**
@@ -62,11 +65,9 @@ API for cattle tracking built with **FastAPI**, **Clean Architecture**, **JWT au
 git clone https://github.com/Vitor47/CowTrackAPI.git
 cd CowTrackAPI
 
-# 2. Virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# 3. Install dependencies
+# 2. Install uv if needed: https://docs.astral.sh/uv/getting-started/installation/
+# 3. Install Python 3.14 and dependencies (uv creates .venv)
+uv python install 3.14
 make install-dev
 
 # 4. Configure environment
@@ -95,22 +96,20 @@ git clone https://github.com/Vitor47/CowTrackAPI.git
 cd CowTrackAPI
 ```
 
-### Create virtual environment
+### Install uv and dependencies
+
+uv creates `.venv` and installs the version pinned in `.python-version`.
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate        # Linux / macOS
-# venv\Scripts\activate         # Windows
+uv python install 3.14
 ```
-
-### Install dependencies
 
 **Production only:**
 
 ```bash
 make install
 # or
-pip install -r requirements.txt
+uv sync --frozen --no-dev
 ```
 
 **Production + development (recommended for contributors):**
@@ -118,7 +117,7 @@ pip install -r requirements.txt
 ```bash
 make install-dev
 # or
-pip install -r requirements.txt -r requirements-dev.txt
+uv sync --frozen
 ```
 
 ---
@@ -362,6 +361,22 @@ make pre-commit-hook
 
 ---
 
+## CI and deploy
+
+GeoBov automation lives in `.github/workflows/`.
+
+- **GeoBov CI** runs on pull requests only: isort, black, flake8, mypy, pylint, and pytest.
+- **GeoBov deploy** runs when you push a tag matching `v*` (API rebuild + Alembic migrations), or when you start it by hand under Actions → Run workflow and choose which services to update and whether to migrate.
+
+The server is one small EC2 on the AWS Free plan. Setup, secrets, and teardown are in [deploy/aws/README.md](deploy/aws/README.md).
+
+```bash
+bash deploy/aws/provision.sh
+bash deploy/aws/push-update.sh --api --migrate
+```
+
+---
+
 ## Project Structure
 
 ```
@@ -375,6 +390,8 @@ CowTrackAPI/
 │   ├── domain/            # Entities, repository contracts, enums
 │   ├── presentation/      # FastAPI endpoints and schemas
 │   └── main.py
+├── .github/workflows/     # GeoBov CI (pull requests) and deploy
+├── deploy/aws/            # Single-EC2 deploy scripts
 ├── alembic/               # Database migrations
 ├── scripts/               # Dev helper scripts
 ├── tests/                 # pytest test suite
@@ -382,8 +399,8 @@ CowTrackAPI/
 ├── docker-compose.yml
 ├── Dockerfile
 ├── Makefile
-├── requirements.txt
-└── requirements-dev.txt
+├── pyproject.toml
+└── uv.lock
 ```
 
 Architecture flow:

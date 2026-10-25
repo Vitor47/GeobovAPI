@@ -1,7 +1,8 @@
+import hashlib
 from typing import Annotated
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi_utils.cbv import cbv
 
 from app.adapters.container import Container
@@ -15,6 +16,8 @@ from app.core.auth.deps import (
     CompanyIdDep,
 )
 from app.core.cache_utils.user_cache import CachedUser
+from app.core.config import settings
+from app.core.rate_limit import client_ip, register_attempt
 from app.domain.use_cases.exceptions import StopUseCaseException
 from app.presentation.api.v1.schemas.common import ErrorResponse
 from app.presentation.api.v1.schemas.gateway import (
@@ -163,11 +166,16 @@ class GatewayController:
                 "model": ErrorResponse,
                 "description": "Invalid telemetry payload.",
             },
+            429: {
+                "model": ErrorResponse,
+                "description": "Too many ingest requests.",
+            },
         },
     )
     def ingest_telemetry(
         self,
         data: GatewayTelemetryIngest,
+        request: Request,
         x_gateway_api_key: Annotated[
             str,
             Header(
@@ -176,6 +184,16 @@ class GatewayController:
             ),
         ],
     ):
+        peer = request.client.host if request.client else None
+        source = client_ip(request.headers.get("x-real-ip"), peer)
+        key_hash = hashlib.sha256(x_gateway_api_key.encode("utf-8")).hexdigest()[:16]
+        hits = register_attempt(
+            f"ingest:{key_hash}:{source}",
+            settings.INGEST_WINDOW_SECONDS,
+        )
+        if hits > settings.INGEST_MAX_REQUESTS:
+            raise HTTPException(status_code=429, detail="Too many ingest requests")
+
         payload = GatewayTelemetryIngestDTO(
             protocol_version=data.protocol_version,
             cow_id=data.cow_id,

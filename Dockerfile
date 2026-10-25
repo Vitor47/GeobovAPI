@@ -1,12 +1,14 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.12-slim AS base
+FROM python:3.14-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_PROJECT_ENVIRONMENT=/app/.venv
 
 WORKDIR /app
 
@@ -18,22 +20,23 @@ RUN apt-get update \
 
 FROM base AS builder
 
+COPY --from=ghcr.io/astral-sh/uv:0.12.19 /uv /uvx /bin/
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
         libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY pyproject.toml uv.lock ./
 
-RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
 FROM base AS runtime
 
-COPY requirements.txt .
-COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt \
-    && rm -rf /wheels requirements.txt
+COPY --from=builder /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY . .
 
@@ -59,7 +62,11 @@ FROM runtime AS development
 
 USER root
 
-RUN pip install --no-cache-dir watchfiles
+COPY --from=ghcr.io/astral-sh/uv:0.12.19 /uv /uvx /bin/
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project \
+    && chown -R app:app /app/.venv
 
 USER app
 

@@ -23,10 +23,15 @@ class CachedUser:
     role: str | None
     is_superuser: bool
     company_ids: list[int] = field(default_factory=list)
+    jti: str | None = None
 
 
 def _session_key(user_id: int | str) -> str:
     return f"session:user:{user_id}"
+
+
+def _revoked_key(jti: str) -> str:
+    return f"revoked:jti:{jti}"
 
 
 def _resolve_role_name(role: Any) -> str | None:
@@ -67,6 +72,7 @@ def serialize_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "company_ids": [int(item) for item in company_ids],
         "role": payload.get("role"),
         "is_superuser": bool(payload.get("is_superuser", False)),
+        "jti": payload.get("jti"),
     }
 
 
@@ -80,6 +86,7 @@ def deserialize_user(data: dict[str, Any]) -> CachedUser:
         company_ids=[int(item) for item in company_ids],
         role=data.get("role"),
         is_superuser=bool(data.get("is_superuser", False)),
+        jti=data.get("jti"),
     )
 
 
@@ -111,5 +118,22 @@ def get_cached_session(user_id: int | str) -> CachedUser | None:
     return deserialize_user(json.loads(cached))
 
 
-def invalidate_user_session(user_id: int | str) -> None:
+def is_token_revoked(jti: str) -> bool:
+    return bool(redis_client.exists(_revoked_key(jti)))
+
+
+def revoke_token(user_id: int | str, jti: str | None) -> None:
+    """
+    Drop the server session and keep the JWT id blocked until it would expire.
+
+    A later request must not recreate the session from the token claims.
+    """
     redis_client.delete(_session_key(user_id))
+    if not jti:
+        return
+    ttl_seconds = max(int(settings.ACCESS_TOKEN_EXPIRE_MINUTES) * 60, 1)
+    redis_client.setex(_revoked_key(jti), ttl_seconds, "1")
+
+
+def invalidate_user_session(user_id: int | str, jti: str | None = None) -> None:
+    revoke_token(user_id, jti)

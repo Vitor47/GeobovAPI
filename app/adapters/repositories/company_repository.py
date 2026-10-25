@@ -52,9 +52,8 @@ class CompanyRepository(CompanyRepositoryAbstract):
                 return [], 0
             q = q.filter(Company.id.in_(list(company_ids)))
 
-        normalized = (query or "").strip()
-        if normalized:
-            q = q.filter(Company.name.ilike(f"%{normalized}%"))
+        if query:
+            q = q.filter(Company.name.contains(query, autoescape=True))
 
         total = q.count()
         safe_page = max(page, 1)

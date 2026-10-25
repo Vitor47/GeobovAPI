@@ -1,0 +1,74 @@
+# GeoBov CI — linters and tests on merge requests only.
+# GitHub pull requests are the merge-request equivalent. Pushes to a branch
+# do not start this workflow; opening or updating a pull request does.
+
+name: GeoBov CI
+
+on:
+  pull_request:
+
+concurrency:
+  group: geobov-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Linters
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install Python
+        run: uv python install 3.14
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: isort
+        run: uv run isort --profile=black --line-length=88 --check-only --diff app tests alembic
+
+      - name: black
+        run: uv run black --check --line-length=88 --preview app tests alembic
+
+      - name: flake8
+        run: uv run flake8 app tests alembic
+
+      - name: mypy
+        run: uv run mypy app tests
+
+      - name: pylint
+        run: uv run pylint --rcfile=.pylintrc app tests
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install Python
+        run: uv python install 3.14
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: pytest
+        run: uv run pytest tests/ -v --tb=short

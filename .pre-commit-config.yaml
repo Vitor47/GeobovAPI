@@ -3,11 +3,8 @@ repos:
     hooks:
       - id: black
         name: Run Black Formatter
-        entry: black
-        language: python
-        additional_dependencies:
-          - black==26.5.1
-          - click==8.4.1
+        entry: uv run --frozen black
+        language: system
         args:
           - --line-length=88
           - --check
@@ -17,14 +14,14 @@ repos:
 
       - id: flake8
         name: Run Flake8 Linter
-        entry: flake8
+        entry: uv run --frozen flake8
         language: system
         types:
           - python
 
       - id: isort
         name: Run Isort
-        entry: isort
+        entry: uv run --frozen isort
         language: system
         args:
           - --profile=black
@@ -36,7 +33,7 @@ repos:
 
       - id: mypy
         name: Run Mypy Type Checker
-        entry: mypy
+        entry: uv run --frozen mypy
         language: system
         pass_filenames: false
         always_run: true
@@ -46,7 +43,7 @@ repos:
 
       - id: pylint
         name: Run Pylint Linter
-        entry: pylint
+        entry: uv run --frozen pylint
         language: system
         pass_filenames: false
         always_run: true
@@ -57,7 +54,7 @@ repos:
 
       - id: pytest
         name: Run Tests
-        entry: python -m pytest
+        entry: uv run --frozen python -m pytest
         language: system
         pass_filenames: false
         always_run: true

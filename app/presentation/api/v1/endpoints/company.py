@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_utils.cbv import cbv
@@ -7,7 +9,11 @@ from app.core.auth.deps import CanReadCompanyDep, CompanyIdDep
 from app.core.cache_utils.user_cache import CachedUser
 from app.domain.use_cases.exceptions import StopUseCaseException
 from app.presentation.api.v1.schemas.common import ErrorResponse
-from app.presentation.api.v1.schemas.company import CompanyListResponse, CompanyResponse
+from app.presentation.api.v1.schemas.company import (
+    CompanyListQuery,
+    CompanyListResponse,
+    CompanyResponse,
+)
 
 router = APIRouter(tags=["Companies"])
 
@@ -42,10 +48,8 @@ class CompanyController:
     )
     def list_companies(
         self,
+        params: Annotated[CompanyListQuery, Query()],
         current_user: CachedUser = CanReadCompanyDep,
-        q: str | None = Query(default=None, description="Filter by farm name."),
-        page: int = Query(default=1, ge=1),
-        page_size: int = Query(default=20, ge=1, le=100),
     ):
         company_ids = None
         if not current_user.is_superuser:
@@ -53,9 +57,9 @@ class CompanyController:
 
         use_case = self.list_companies_use_case_factory(
             company_ids=company_ids,
-            query=q,
-            page=page,
-            page_size=page_size,
+            query=params.q,
+            page=params.page,
+            page_size=params.page_size,
         )
 
         try:

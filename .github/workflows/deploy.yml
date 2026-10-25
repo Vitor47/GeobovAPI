@@ -1,0 +1,138 @@
+# GeoBov deploy.
+# - Pushing a tag v* updates the API and runs migrations.
+# - Actions → GeoBov deploy → Run workflow lets you pick services and migrations.
+
+name: GeoBov deploy
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      update_api:
+        description: Rebuild and restart the API
+        type: boolean
+        default: true
+      update_postgres:
+        description: Update Postgres (data volume is kept)
+        type: boolean
+        default: false
+      update_redis:
+        description: Update Redis (data volume is kept)
+        type: boolean
+        default: false
+      update_mongo:
+        description: Update MongoDB (data volume is kept)
+        type: boolean
+        default: false
+      run_migrations:
+        description: Run database migrations (alembic upgrade head)
+        type: boolean
+        default: false
+
+concurrency:
+  group: geobov-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy GeoBov
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APP_DIR: /opt/geobov
+      DEPLOY_HOST: ${{ secrets.GEBOV_SSH_HOST }}
+      DEPLOY_USER: ${{ secrets.GEBOV_SSH_USER }}
+      DEPLOY_KEY: ${{ secrets.GEBOV_SSH_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve what to run
+        id: options
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "update_api=true" >> "$GITHUB_OUTPUT"
+            echo "update_postgres=false" >> "$GITHUB_OUTPUT"
+            echo "update_redis=false" >> "$GITHUB_OUTPUT"
+            echo "update_mongo=false" >> "$GITHUB_OUTPUT"
+            echo "run_migrations=true" >> "$GITHUB_OUTPUT"
+            echo "A tag release updates the API and runs migrations."
+          else
+            echo "update_api=${{ inputs.update_api }}" >> "$GITHUB_OUTPUT"
+            echo "update_postgres=${{ inputs.update_postgres }}" >> "$GITHUB_OUTPUT"
+            echo "update_redis=${{ inputs.update_redis }}" >> "$GITHUB_OUTPUT"
+            echo "update_mongo=${{ inputs.update_mongo }}" >> "$GITHUB_OUTPUT"
+            echo "run_migrations=${{ inputs.run_migrations }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Require at least one action
+        run: |
+          set -euo pipefail
+          selected=0
+          for flag in \
+            "${{ steps.options.outputs.update_api }}" \
+            "${{ steps.options.outputs.update_postgres }}" \
+            "${{ steps.options.outputs.update_redis }}" \
+            "${{ steps.options.outputs.update_mongo }}" \
+            "${{ steps.options.outputs.run_migrations }}"
+          do
+            if [[ "$flag" == "true" ]]; then
+              selected=1
+            fi
+          done
+          if [[ "$selected" -eq 0 ]]; then
+            echo "Choose at least one option: a service to update, or migrations."
+            exit 1
+          fi
+
+      - name: Check deploy secrets
+        run: |
+          set -euo pipefail
+          if [[ -z "${DEPLOY_HOST}" || -z "${DEPLOY_KEY}" ]]; then
+            echo "Missing GitHub Actions secrets GEBOV_SSH_HOST and GEBOV_SSH_KEY."
+            echo "Create the server once with deploy/aws/provision.sh, then add those secrets."
+            exit 1
+          fi
+
+      - name: Upload code and update the server
+        env:
+          UPDATE_API: ${{ steps.options.outputs.update_api }}
+          UPDATE_POSTGRES: ${{ steps.options.outputs.update_postgres }}
+          UPDATE_REDIS: ${{ steps.options.outputs.update_redis }}
+          UPDATE_MONGO: ${{ steps.options.outputs.update_mongo }}
+          RUN_MIGRATIONS: ${{ steps.options.outputs.run_migrations }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "${HOME}/.ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "${HOME}/.ssh/geobov.pem"
+          chmod 400 "${HOME}/.ssh/geobov.pem"
+          SSH_USER="${DEPLOY_USER:-ubuntu}"
+          SSH_OPTS="-i ${HOME}/.ssh/geobov.pem -o StrictHostKeyChecking=accept-new"
+          rsync -az --delete \
+            --exclude '.git' \
+            --exclude 'venv' \
+            --exclude '.venv' \
+            --exclude '__pycache__' \
+            --exclude '.mypy_cache' \
+            --exclude '.pytest_cache' \
+            --exclude '.env' \
+            --exclude 'deploy/aws/.env' \
+            --exclude 'deploy/aws/*.pem' \
+            --exclude 'deploy/aws/.provision-state.env' \
+            -e "ssh ${SSH_OPTS}" \
+            ./ "${SSH_USER}@${DEPLOY_HOST}:${APP_DIR}/"
+          args=()
+          [[ "$UPDATE_API" == "true" ]] && args+=(--api)
+          [[ "$UPDATE_POSTGRES" == "true" ]] && args+=(--postgres)
+          [[ "$UPDATE_REDIS" == "true" ]] && args+=(--redis)
+          [[ "$UPDATE_MONGO" == "true" ]] && args+=(--mongo)
+          [[ "$RUN_MIGRATIONS" == "true" ]] && args+=(--migrate)
+          ssh ${SSH_OPTS} "${SSH_USER}@${DEPLOY_HOST}" \
+            "sudo bash ${APP_DIR}/deploy/aws/update.sh ${args[*]}"

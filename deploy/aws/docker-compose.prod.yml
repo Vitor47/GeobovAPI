@@ -1,13 +1,14 @@
-# Self-contained production stack for a single EC2 (TCC / low cost).
+# GeoBov production stack for a single small EC2.
 # Postgres, Redis, and Mongo stay on the Docker network only (no public ports).
 # API listens on localhost:8000 for Nginx reverse proxy.
+# Memory caps keep the stack inside a 2 GB instance.
 
-name: cowtrack
+name: geobov
 
 services:
   db:
     image: postgres:16-alpine
-    container_name: cowtrack_postgres
+    container_name: geobov_postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -16,7 +17,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - cowtrack_network
+      - geobov_network
     healthcheck:
       test:
         [
@@ -30,18 +31,18 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: cowtrack_redis
+    container_name: geobov_redis
     restart: unless-stopped
     command: >
       redis-server
       --appendonly yes
       --appendfsync everysec
-      --maxmemory 256mb
+      --maxmemory 128mb
       --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     networks:
-      - cowtrack_network
+      - geobov_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -51,12 +52,13 @@ services:
 
   mongo:
     image: mongo:7
-    container_name: cowtrack_mongo
+    container_name: geobov_mongo
     restart: unless-stopped
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
     volumes:
       - mongo_data:/data/db
     networks:
-      - cowtrack_network
+      - geobov_network
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 5s
@@ -69,7 +71,7 @@ services:
       context: ../..
       dockerfile: Dockerfile
       target: production
-    container_name: cowtrack_api
+    container_name: geobov_api
     restart: unless-stopped
     depends_on:
       db:
@@ -92,7 +94,7 @@ services:
       APP_ENV: production
       ADMIN_ENABLED: ${ADMIN_ENABLED:-false}
     networks:
-      - cowtrack_network
+      - geobov_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -101,7 +103,7 @@ services:
       start_period: 40s
 
 networks:
-  cowtrack_network:
+  geobov_network:
     driver: bridge
 
 volumes:

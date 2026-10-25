@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -20,7 +21,11 @@ def build_token_payload(user) -> dict[str, Any]:
 
 
 def create_access_token(data: dict[str, Any]) -> str:
+    if settings.ALGORITHM.lower() == "none":
+        raise ValueError("JWT algorithm is not allowed")
+
     payload = data.copy()
+    payload["jti"] = secrets.token_urlsafe(16)
     payload["exp"] = datetime.now(timezone.utc) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
