@@ -461,8 +461,15 @@
        apName.c_str()
    );
  
-   wm.startConfigPortal(
-       apName.c_str()
+   LOGF("Antes de iniciar o portal...\n");
+ 
+   bool portalResult = wm.startConfigPortal(
+     apName.c_str()
+   );
+ 
+   LOGF(
+     "Portal finalizado. Resultado: %d\n",
+     portalResult
    );
  
    // -------------------------------------------------------------------------
