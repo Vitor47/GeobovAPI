@@ -131,33 +131,11 @@ static const char DEFAULT_API_URL[] =
 static const char LEGACY_LAN_API_URL[] =
     "http://192.168.0.44:8000/api/v1/gateways/ingest";
 
-static String resolveApiUrl(const String& saved) {
-  if (saved.length() == 0 || saved == LEGACY_LAN_API_URL) {
-    return String(DEFAULT_API_URL);
-  }
-  return saved;
-}
-
-// ===========================================================================
-// GLOBALS
-// ===========================================================================
-
-static Preferences prefs;
-
-static String g_apiUrl;
-
-static String g_gatewayApiKey;
-
-static long g_loraFrequencyHz =
-    static_cast<long>(
-        DEFAULT_LORA_MHZ
-    ) * 1000000L;
-
 // ===========================================================================
 // BINARY PACKET
 // ===========================================================================
 //
-// DEVE SER IDÊNTICO AO SENDER.
+// Must match the sender exactly.
 //
 // Sender:
 //   sizeof(LoRaPacket) == 17
@@ -214,6 +192,28 @@ struct TelemetryPacket {
 
   bool valid;
 };
+
+static String resolveApiUrl(const String& saved) {
+  if (saved.length() == 0 || saved == LEGACY_LAN_API_URL) {
+    return String(DEFAULT_API_URL);
+  }
+  return saved;
+}
+
+// ===========================================================================
+// GLOBALS
+// ===========================================================================
+
+static Preferences prefs;
+
+static String g_apiUrl;
+
+static String g_gatewayApiKey;
+
+static long g_loraFrequencyHz =
+    static_cast<long>(
+        DEFAULT_LORA_MHZ
+    ) * 1000000L;
 
 // ===========================================================================
 // LOAD SETTINGS
